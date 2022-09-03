@@ -3,7 +3,8 @@
 
 ## 介绍 ##
 基于nps的Shell脚本，集成socks5搭建，管理，启动，添加账号等基本操作。方便用户操作，并且支持快速构建socks5服务环境。
-
+- 默认管理页面ip:18080<br>
+- 默认管理员账号密码:admin admin<br>
 - 脚本只提供学习交流，请在法律允许范围内使用！！！！<br>
 ![image](https://github.com/wyx176/nps-socks5/blob/main/server.png)
 ![image](https://github.com/wyx176/nps-socks5/blob/main/port.png)
