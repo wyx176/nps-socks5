@@ -8,8 +8,8 @@
 ![image](https://github.com/wyx176/nps-socks5/blob/main/server.png)
 ![image](https://github.com/wyx176/nps-socks5/blob/main/port.png)
 ## 系统支持 ##
-* CentOS 
-* CentOS 
+* linux amd 64 
+* 其它版本的系统建设中
 
 
 ## 功能 ##
