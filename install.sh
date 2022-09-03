@@ -117,6 +117,7 @@ echo "--安装成功------"${errorMsg}
 echo "--后台管理地址"${ipAdd}":"${webPort}
 echo "--登录账号admin"
 echo "--登录密码admin"
+echo "默认socks5账号信息:账号socks5 密码socks5 端口5555"
 echo "如需修改后台管理端口以及账号密码请看github"
 }
 
