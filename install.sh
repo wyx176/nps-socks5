@@ -2,7 +2,7 @@
 export PATH=/usr/local/sbin:/usr/local/bin:/sbin:/bin:/usr/sbin:/usr/bin
 webPort=18080
 errorMsg=反馈群t.me/Scoks55555
-version=v1.0
+version=v2.0
 downLoadUrl=https://github.com/wyx176/nps-socks5/releases/download/
 serverSoft=linux_amd64_server
 clientSoft=linux_amd64_client
