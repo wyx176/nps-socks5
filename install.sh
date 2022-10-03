@@ -28,8 +28,9 @@ unstallServer(){
 
 unstallClient(){
 	cd ${s5Path}${clientSoft} && npc stop &&  ./npc uninstall
-	rm -rf /usr/bin/nps
+	
 	rm -rf ${s5Path}${clientSoft}
+	rm -rf ${s5Path}${clientSoft}.tar.gz
 	echo "卸载客户端成功"
 }
 
