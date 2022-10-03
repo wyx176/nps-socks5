@@ -12,8 +12,8 @@
 ![image](https://github.com/wyx176/nps-socks5/blob/main/server.png)
 ![image](https://github.com/wyx176/nps-socks5/blob/main/port.png)
 ## 系统支持 ##
-* centos 
-* 其它版本系统的需要构建，目前手里只有centos，需要其它系统的到群里反馈联系
+* centos <br>
+* 其它版本系统的需要构建，目前手里只有centos，需要其它系统的到群里反馈联系<br>
 
 
 ## 功能 ##
@@ -33,7 +33,7 @@
  
 ## 更新日志 ##
 -2022.10.03 v2.0<br>
-1、增加多端口、多账号设置
+1、增加多端口、多账号设置<br>
 -2022.09.03 v1.0<br>
 
 ## 写在最后 ##
