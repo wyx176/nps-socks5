@@ -12,7 +12,8 @@
 ![image](https://github.com/wyx176/nps-socks5/blob/main/server.png)
 ![image](https://github.com/wyx176/nps-socks5/blob/main/port.png)
 ## 系统支持 ##
-* centos <br>
+* linux/windows都支持，但是需要构建 <br>
+* 一键脚本目前只支持centos <br>
 * 其它版本系统的需要构建，目前手里只有centos，需要其它系统的到群里反馈联系<br>
 
 
