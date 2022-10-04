@@ -2,7 +2,7 @@
 - [x] 稳定版V2.0
 
 ## 介绍 ##
-基于nps的Shell脚本，集成socks5搭建，管理，启动，添加账号等基本操作。方便用户操作，并且支持快速构建socks5服务环境。
+基于[nps](https://github.com/ehang-io/nps)的Shell脚本，集成socks5搭建，管理，启动，添加账号等基本操作。方便用户操作，并且支持快速构建socks5服务环境。
 - 默认管理页面ip:18080<br>
 - 默认管理员账号密码:admin admin<br>
 - 默认socks5账号信息:账号socks5  密码socks5 端口5555
@@ -23,8 +23,10 @@
 - 全新的web端管理，支持多端口、多账号、多服务器、以及中转代理
 - 添加账户，删除用户，开启账户验证，关闭账户验证，一键修改端口
 
-## 一键安装或更新到最新 ##
+## 方法一：一键安装或更新到最新(centos) ##
  <pre><code>wget -q -N --no-check-certificate https://raw.githubusercontent.com/wyx176/nps-socks5/master/install.sh && chmod 777 install.sh && bash install.sh</code></pre>
+ ## 方法二:linux、windows均支持，需要安装go语言环境自主进行编译
+ [参考NPS文档](https://ehang-io.github.io/nps/#/install)
 
 ## 相关文件路径 ##
 - 1.后台管理的配置文件<br>
