@@ -26,8 +26,13 @@
 ## 方法一：一键安装或更新到最新(centos) ##
  <pre><code>wget -q -N --no-check-certificate https://raw.githubusercontent.com/wyx176/nps-socks5/master/install.sh && chmod 777 install.sh && bash install.sh</code></pre>
  ## 方法二:linux、windows均支持，需要安装go语言环境自主进行编译
- [参考NPS文档](https://ehang-io.github.io/nps/#/install)
-
+ [参考NPS文档](https://ehang-io.github.io/nps/#/install)<br>
+ 1、安装源码
+  <pre><code>go get -u github.com/wyx176/nps-socks5</code></pre>
+2、编译服务端
+<pre><code>go build cmd/nps/nps.go</code></pre>
+3、编译客户端
+<pre><code>go build cmd/npc/npc.go</code></pre>
 ## 相关文件路径 ##
 - 1.后台管理的配置文件<br>
  /etc/nps/conf<br>
