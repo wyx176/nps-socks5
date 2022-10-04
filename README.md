@@ -24,7 +24,7 @@
 - 添加账户，删除用户，开启账户验证，关闭账户验证，一键修改端口
 
 ## 一键安装或更新到最新 ##
- <pre><code>wget -q -N --no-check-certificate https://raw.githubusercontent.com/wyx176/nps-socks5/main/install.sh && chmod 777 install.sh && bash install.sh</code></pre>
+ <pre><code>wget -q -N --no-check-certificate https://raw.githubusercontent.com/wyx176/nps-socks5/master/install.sh && chmod 777 install.sh && bash install.sh</code></pre>
 
 ## 相关文件路径 ##
 - 1.后台管理的配置文件<br>
