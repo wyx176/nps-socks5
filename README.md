@@ -7,6 +7,7 @@
 - 默认管理员账号密码:admin admin<br>
 - 默认socks5账号信息:账号socks5  密码socks5 端口5555
 - 支持多端口、多账号管理<br>
+- 加密传输、数据压缩<br>
 - 服务端、客户端分离安装、可实现国内中专代理，降低被和谐概率<br>
 - 脚本只提供学习交流，请在法律允许范围内使用！！！！<br>
 ![image](https://github.com/wyx176/nps-socks5/blob/main/server.png)
