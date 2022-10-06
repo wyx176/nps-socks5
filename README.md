@@ -1,5 +1,5 @@
 # nps-socks5服务一键搭建脚本
-- [x] 稳定版V2.0
+- [x] 稳定版V3.0
 
 ## 介绍 ##
 基于[nps](https://github.com/ehang-io/nps)的Shell脚本，集成socks5搭建，管理，启动，添加账号等基本操作。方便用户操作，并且支持快速构建socks5服务环境。
