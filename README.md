@@ -41,6 +41,13 @@
  web管理端口web_port = 18080<br>
  
 ## 更新日志 ##
+-2022.10.06 v3.0<br>
+1、端口增加创建时间、到期时间<br>
+2、开启用户注册<br>
+安装后修改/etc/nps/conf/nps.conf中<br>
+allow_user_login=true<br>
+allow_user_register=true<br>
+
 -2022.10.03 v2.0<br>
 1、增加多端口、多账号设置<br>
 -2022.09.03 v1.0<br>
