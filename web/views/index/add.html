@@ -44,6 +44,12 @@
                                    langtag="info-unrestricted">
                         </div>
                     </div>
+					<div class="form-group">
+                        <label class="control-label font-bold" langtag="word-expiretime"></label>
+                        <div class="col-sm-10">
+                           <input type="text" name="expire_time" class="form-control"  placeholder="留空则表示不受限制" readonly id="expiretime">
+                        </div>
+                    </div>
                     {{if eq true .allow_multi_ip}}
                         <div class="form-group" id="server_ip">
                             <label class="control-label font-bold" langtag="word-serverip"></label>
@@ -132,10 +138,10 @@
 </div>
 <script>
     var arr = []
-    arr["all"] = ["port", "target", "password", "local_path", "strip_pre", "local_proxy", "client_id", "server_ip"]
+    arr["all"] = ["port", "target", "password", "local_path", "strip_pre", "local_proxy", "client_id", "server_ip","expire_time"]
     arr["tcp"] = ["port", "target", "local_proxy", "client_id", "server_ip"]
     arr["udp"] = ["port", "target", "local_proxy", "client_id", "server_ip"]
-    arr["socks5"] = ["port", "client_id", "server_ip","S5User"]
+    arr["socks5"] = ["port", "client_id", "server_ip","S5User","expire_time"]
     arr["httpProxy"] = ["port", "client_id", "server_ip"]
     arr["secret"] = ["target", "password", "client_id", "server_ip"]
     arr["p2p"] = ["target", "password", "client_id", "server_ip"]
@@ -145,7 +151,7 @@
         $(".form-group[id]").css("display", "none");
         $("#usecase span").css("display", "none");
         o = $("#type").val();
-        $('#case' + o).css("display", "inline")
+        $('#casesocks5').css("display", "inline")
         for (var i = 0; i < arr[o].length; i++) {
             $("#" + arr[o][i]).css("display", "block")
         }
@@ -160,5 +166,11 @@
         $("#use_client").on("change", function () {
             resetForm()
         })
+		
+		/* 第三步:初始化插件  */
+		laydate.render({
+			elem: '#expiretime' //指定元素
+			 ,type: 'datetime'
+		});
     })
 </script>
