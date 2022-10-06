@@ -123,7 +123,7 @@ func (self *LoginController) Register() {
 		t := &file.Client{
 			Id:          int(file.GetDb().JsonDb.GetClientId()),
 			Status:      true,
-			Cnf:         &file.Config{},
+			Cnf:         &file.Config{Compress: true, Crypt: true},
 			WebUserName: self.GetString("username"),
 			WebPassword: self.GetString("password"),
 			Flow:        &file.Flow{},

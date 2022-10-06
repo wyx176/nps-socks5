@@ -1,10 +1,12 @@
 package controllers
 
 import (
+	"ehang.io/nps/lib/common"
 	"ehang.io/nps/lib/file"
 	"ehang.io/nps/server"
 	"ehang.io/nps/server/tool"
 	"strings"
+	"time"
 
 	"github.com/astaxie/beego"
 )
@@ -118,7 +120,13 @@ func (s *IndexController) Add() {
 			StripPre:     s.getEscapeString("strip_pre"),
 			Flow:         &file.Flow{},
 			S5User:       s.getEscapeString("S5User"),
+			CreateTime:   time.Now().Format(common.DEFAULT_TIME),
+			ExpireTime:   s.getEscapeString("expire_time"),
 			MultiAccount: &file.MultiAccount{AccountMap: authStrToMap(s.getEscapeString("S5User"))},
+		}
+		if t.Mode == "socks5" && t.S5User == "" {
+			s.AjaxErr("The account number cannot be empty")
+			return
 		}
 		if !tool.TestServerPort(t.Port, t.Mode) {
 			s.AjaxErr("The port cannot be opened because it may has been occupied or is no longer allowed.")
@@ -130,6 +138,7 @@ func (s *IndexController) Add() {
 		if t.Client.MaxTunnelNum != 0 && t.Client.GetTunnelNum() >= t.Client.MaxTunnelNum {
 			s.AjaxErr("The number of tunnels exceeds the limit")
 		}
+
 		if err := file.GetDb().NewTask(t); err != nil {
 			s.AjaxErr(err.Error())
 		}
@@ -179,6 +188,10 @@ func (s *IndexController) Edit() {
 				}
 				t.Port = s.GetIntNoErr("port")
 			}
+			if t.Mode == "socks5" && s.getEscapeString("S5User") == "" {
+				s.AjaxErr("The account number cannot be empty")
+				return
+			}
 			t.ServerIp = s.getEscapeString("server_ip")
 			t.Mode = s.getEscapeString("type")
 			t.Target = &file.Target{TargetStr: s.getEscapeString("target")}
@@ -189,6 +202,7 @@ func (s *IndexController) Edit() {
 			t.Remark = s.getEscapeString("remark")
 			t.Target.LocalProxy = s.GetBoolNoErr("local_proxy")
 			t.S5User = s.getEscapeString("S5User")
+			t.ExpireTime = s.getEscapeString("expire_time")
 			t.MultiAccount = &file.MultiAccount{AccountMap: authStrToMap(s.getEscapeString("S5User"))}
 			file.GetDb().UpdateTask(t)
 			server.StopServer(t.Id)
