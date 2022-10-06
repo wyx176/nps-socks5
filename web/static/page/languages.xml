@@ -120,7 +120,14 @@
 		<zh-CN>编辑</zh-CN>
 		<en-US>Edit</en-US>
 	</lang>
-
+	<lang id="word-createtime">
+		<zh-CN>创建时间</zh-CN>
+		<en-US>Create Time</en-US>
+	</lang>
+	<lang id="word-expiretime">
+		<zh-CN>到期时间</zh-CN>
+		<en-US>Expire Time</en-US>
+	</lang>
 	<lang id="word-address">
 		<zh-CN>服务器地址</zh-CN>
 		<en-US>Client address</en-US>
@@ -786,6 +793,10 @@
 		<lang id="webloginusernameduplicatepleasereset">
 			<zh-CN>Web登陆用户名重复，请重新设置</zh-CN>
 			<en-US>Web login username duplicate, please reset</en-US>
+		</lang>
+		<lang id="theaccountnumbercannotbeempty">
+			<zh-CN>账号不能为空</zh-CN>
+			<en-US>The account number cannot be empty</en-US>
 		</lang>
 	</reply>
 
