@@ -5735,13 +5735,13 @@ body.mini-navbar.fixed-sidebar .logo-element {
 }
 .logo-name {
   color: #e6e6e6;
-  font-size: 180px;
-  font-weight: 800;
-  letter-spacing: -10px;
+  font-size: 10px;
+  font-weight: 70;
+  letter-spacing: -3px;
   margin-bottom: 0;
 }
 .middle-box h1 {
-  font-size: 170px;
+  font-size: 60px;
 }
 .wrapper .middle-box {
   margin-top: 140px;
