@@ -20,7 +20,7 @@
 - 全新的web端管理，支持多端口、多账号、多服务器、以及中转代理
 - 添加账户、删除用户、开启账户验证、关闭账户验证、一键修改端口
 
-## 方法一：一键安装或更新到最新(centos) ##
+## 方法一：一键安装或更新到最新 ##
  <pre><code>wget -q -N --no-check-certificate https://raw.githubusercontent.com/wyx176/nps-socks5/master/install.sh && chmod 777 install.sh && bash install.sh</code></pre>
  ## 方法二:linux、windows均支持，需要安装go语言环境进行编译
  [参考NPS文档](https://ehang-io.github.io/nps/#/install)<br>
