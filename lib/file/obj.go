@@ -128,6 +128,8 @@ type Tunnel struct {
 	Id           int
 	Port         int
 	S5User       string
+	CreateTime   string
+	ExpireTime   string
 	ServerIp     string
 	Mode         string
 	Status       bool
