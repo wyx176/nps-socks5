@@ -13,15 +13,12 @@
 ![image](https://github.com/wyx176/nps-socks5/blob/main/server.png)
 ![image](https://github.com/wyx176/nps-socks5/blob/main/port.png)
 ## 系统支持 ##
-* linux/windows都支持，但是需要构建 <br>
-* 一键脚本目前只支持centos <br>
-* 其它版本系统的需要构建，目前手里只有centos，需要其它系统的到群里反馈联系<br>
-
-
+* contest、ubuntu、debian <br>
+* windows(需要自行编译)
 ## 功能 ##
- 全自动无人值守安装，服务端部署只需一条命令）
+- 全自动无人值守安装，服务端部署只需一条命令
 - 全新的web端管理，支持多端口、多账号、多服务器、以及中转代理
-- 添加账户，删除用户，开启账户验证，关闭账户验证，一键修改端口
+- 添加账户、删除用户、开启账户验证、关闭账户验证、一键修改端口
 
 ## 方法一：一键安装或更新到最新(centos) ##
  <pre><code>wget -q -N --no-check-certificate https://raw.githubusercontent.com/wyx176/nps-socks5/master/install.sh && chmod 777 install.sh && bash install.sh</code></pre>
@@ -29,9 +26,9 @@
  [参考NPS文档](https://ehang-io.github.io/nps/#/install)<br>
  1、安装源码
   <pre><code>go get -u github.com/wyx176/nps-socks5</code></pre>
-2、编译服务端
+2、编译服务端：进入到nps-socks5文件夹中执行命令
 <pre><code>go build cmd/nps/nps.go</code></pre>
-3、编译客户端
+3、编译客户端：进入到nps-socks5文件夹中执行命令
 <pre><code>go build cmd/npc/npc.go</code></pre>
 ## 相关文件路径 ##
 - 1.后台管理的配置文件<br>

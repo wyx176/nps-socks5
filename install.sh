@@ -11,34 +11,74 @@ clientUrl=${downLoadUrl}${version}/${clientSoft}.tar.gz
 s5Path=/opt/nps-socks5/
 ipAdd=检测失败
 
+if [ -n "$(grep 'Aliyun Linux release' /etc/issue)" -o -e /etc/redhat-release ];then
+    OS=CentOS
+    [ -n "$(grep ' 7\.' /etc/redhat-release)" ] && CentOS_RHEL_version=7
+    [ -n "$(grep ' 6\.' /etc/redhat-release)" -o -n "$(grep 'Aliyun Linux release6 15' /etc/issue)" ] && CentOS_RHEL_version=6
+    [ -n "$(grep ' 5\.' /etc/redhat-release)" -o -n "$(grep 'Aliyun Linux release5' /etc/issue)" ] && CentOS_RHEL_version=5
+elif [ -n "$(grep 'Amazon Linux AMI release' /etc/issue)" -o -e /etc/system-release ];then
+    OS=CentOS
+    CentOS_RHEL_version=6
+elif [ -n "$(grep bian /etc/issue)" -o "$(lsb_release -is 2>/dev/null)" == 'Debian' ];then
+    OS=Debian
+    [ ! -e "$(which lsb_release)" ] && { apt-get -y update; apt-get -y install lsb-release; clear; }
+    Debian_version=$(lsb_release -sr | awk -F. '{print $1}')
+elif [ -n "$(grep Deepin /etc/issue)" -o "$(lsb_release -is 2>/dev/null)" == 'Deepin' ];then
+    OS=Debian
+    [ ! -e "$(which lsb_release)" ] && { apt-get -y update; apt-get -y install lsb-release; clear; }
+    Debian_version=$(lsb_release -sr | awk -F. '{print $1}')
+elif [ -n "$(grep Ubuntu /etc/issue)" -o "$(lsb_release -is 2>/dev/null)" == 'Ubuntu' -o -n "$(grep 'Linux Mint' /etc/issue)" ];then
+    OS=Ubuntu
+    [ ! -e "$(which lsb_release)" ] && { apt-get -y update; apt-get -y install lsb-release; clear; }
+    Ubuntu_version=$(lsb_release -sr | awk -F. '{print $1}')
+    [ -n "$(grep 'Linux Mint 18' /etc/issue)" ] && Ubuntu_version=16
+else
+    echo "Does not support this OS, Please contact the author! "
+    kill -9 $$
+fi
+
+#Install Basic Tools
 init(){
-yum install git unzip wget -y
-yum -y install curl
+if [[ ${OS} == Ubuntu ]];then
+	apt-get  install git unzip wget -y
+	apt-get  install curl
+fi
+if [[ ${OS} == CentOS ]];then
+	yum install git unzip wget -y
+  yum -y install curl
+fi
+if [[ ${OS} == Debian ]];then
+	apt-get install git unzip wget -y
+	apt-get install curl
+fi
 }
 
 unstallServer(){
-	
-	cd ${s5Path}${serverSoft} && nps stop && nps uninstall
-	rm -rf /etc/nps
-	rm -rf /usr/bin/nps
-	rm -rf ${s5Path}${serverSoft}
-	echo "卸载服务端成功"
-	
+	if [[ -d ${s5Path}${serverSoft} ]];then
+      cd ${s5Path}${serverSoft} && nps stop && nps uninstall
+      rm -rf /etc/nps
+      rm -rf /usr/bin/nps
+      rm -rf ${s5Path}${serverSoft}
+	fi
+	 echo "卸载服务端成功"
 }
 
 unstallClient(){
-	cd ${s5Path}${clientSoft} && npc stop &&  ./npc uninstall
-	
-	rm -rf ${s5Path}${clientSoft}
-	rm -rf ${s5Path}${clientSoft}.tar.gz
-	echo "卸载客户端成功"
+  if [[ -d ${s5Path}${clientSoft} ]];then
+  	  cd ${s5Path}${clientSoft} && npc stop &&  ./npc uninstall
+    	rm -rf ${s5Path}${clientSoft}
+    	rm -rf ${s5Path}${clientSoft}.tar.gz
+  fi
+  echo "卸载客户端成功"
 }
 
 allUninstall(){
-unstallServer
-unstallClient
-#删除之前的
-	rm -rf ${s5Path}
+  unstallServer
+  unstallClient
+  #删除之前的
+  if [[ -d ${s5Path} ]];then
+	  rm -rf ${s5Path}
+	fi
 }
 
 checkIp(){
@@ -166,7 +206,7 @@ function check_ip(){
         
         if echo $IP|grep -E "^[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}$">/dev/null; then
                 if [[ $VALID_CHECK == "yes" ]]; then
-                        return "$IP"
+                        return=$IP
                 else
                         echo "安装失败：ip不正确"
 						exit 0
@@ -202,9 +242,9 @@ progressfilt ()
 
 
 menu(){
-echo "1.全部安装"
-echo "2.安装服务端"
-echo "3.安装客户端"
+echo "1.全部安装(推荐只有“一台”服务器情况下)"
+echo "2.安装服务端(推荐安装在“国内”服务器)"
+echo "3.安装客户端(推荐安装在“国外”服务器)"
 echo "4.卸载服务端"
 echo "5.卸载客户端"
 echo "6.全卸载"
