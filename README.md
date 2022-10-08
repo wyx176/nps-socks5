@@ -30,13 +30,16 @@
 <pre><code>go build cmd/nps/nps.go</code></pre>
 3、编译客户端：进入到nps-socks5文件夹中执行命令
 <pre><code>go build cmd/npc/npc.go</code></pre>
-## 相关文件路径 ##
-- 1.后台管理的配置文件<br>
+## 相关文件路径、命令 ##
+- 1、后台管理的配置文件<br>
  /etc/nps/conf<br>
  登录账号web_username=admin<br>
  登录密码web_password=admin<br>
  web管理端口web_port = 18080<br>
- 
+ 修改后需要重启服务端
+ - 2、基本命令 <br>
+ 启动服务端： nps start <br>
+ 停止服务端： nps stop <br>
 ## 更新日志 ##
 -2022.10.06 v3.0<br>
 1、端口增加创建时间、到期时间<br>

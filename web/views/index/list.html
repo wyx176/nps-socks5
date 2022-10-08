@@ -19,7 +19,7 @@
                 <div class="content">
                     <div class="table-responsive">
                         <div id="toolbar">
-                            <a href="{{.web_base_url}}/index/add?type={{.type}}&client_id={{.client_id}}" class="btn btn-primary dim">
+                            <a href="{{.web_base_url}}/index/add?type=socks5&client_id={{.client_id}}" class="btn btn-primary dim">
                             <i class="fa fa-fw fa-lg fa-plus"></i> <span langtag="word-add"></span></a>
                         </div>
                         <table id="taskList_table" class="table-striped table-hover" data-mobile-responsive="true"></table>
@@ -126,7 +126,7 @@
                 field: 'Target',//域值
                 title: '<span langtag="word-target"></span>',//标题
                 halign: 'center',
-                visible: true,//false表示不显示
+                visible: false,//false表示不显示
                 formatter: function (value, row, index) {
                     return row.Target.TargetStr
                 }
