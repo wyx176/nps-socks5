@@ -83,7 +83,7 @@ allUninstall(){
 
 checkIp(){
 
-ipAdd=`curl http://ifconfig.info -s --connect-timeout 10`
+ipAdd=`curl curl ifconfig.co -4 -s --connect-timeout 10`
 clear
 echo "当前ip地址："${ipAdd}
 read -p "如果不对请停止安装或者手动输入服务器ip：(y/n/ip)： " choice
