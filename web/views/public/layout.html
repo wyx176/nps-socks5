@@ -11,15 +11,17 @@
 
     <!-- Mainly scripts -->
     <!-- Latest compiled and minified CSS -->
+    <link href="{{.web_base_url}}/static/css/toastr.min.css" rel="stylesheet">
     <link href="{{.web_base_url}}/static/css/fontawesome.min.css" rel="stylesheet">
     <link href="{{.web_base_url}}/static/css/solid.min.css" rel="stylesheet">
     <link href="{{.web_base_url}}/static/css/bootstrap.min.css" rel="stylesheet">
     <link href="{{.web_base_url}}/static/css/bootstrap-table.min.css" rel="stylesheet">
     <link href="{{.web_base_url}}/static/css/style.css" rel="stylesheet">
-	 
 
     <!-- Latest compiled and minified JavaScript -->
     <script src="{{.web_base_url}}/static/js/jquery-3.4.1.min.js"></script>
+    <script src="{{.web_base_url}}/static/js/clipboard.min.js"></script>
+    <script src="{{.web_base_url}}/static/js/toastr.min.js"></script>
     <script src="{{.web_base_url}}/static/js/popper.min.js"></script>
     <script src="{{.web_base_url}}/static/js/bootstrap.min.js"></script>
     <script src="{{.web_base_url}}/static/js/bootstrap-table.min.js"></script>
@@ -27,8 +29,9 @@
     <script src="{{.web_base_url}}/static/js/echarts.min.js"></script>
     <script src="{{.web_base_url}}/static/js/inspinia.js"></script>
     <!-- Latest compiled and minified Locales -->
-    <script src="{{.web_base_url}}/static/js/language.js" type="text/javascript"></script>
-	<script src="{{.web_base_url}}/static/js/laydate.js" type="text/javascript"></script>
+    <script src="{{.web_base_url}}/static/js/language.js?v=20250528" type="text/javascript"></script>
+    <script src="{{.web_base_url}}/static/js/layui/laydate/laydate.js" type="text/javascript"></script>
+
 
 </head>
 
@@ -56,16 +59,24 @@
                     <a href="{{.web_base_url}}/"><i class="fa fa-tachometer-alt fa-lg"></i>
                     <span class="nav-label" langtag="word-dashboard"></span></a>
                 </li>
+
+
+
                 <li class="{{if eq "client" .menu}}active{{end}}">
                     <a href="{{.web_base_url}}/client/list"><i class="fa fa-desktop fa-lg"></i>
                     <span class="nav-label" langtag="word-client"></span></a>
                 </li>
-                
                 <li class="{{if eq "socks5" .menu}}active{{end}}">
                     <a href="{{.web_base_url}}/index/socks5"><i class="fa fa-layer-group fa-lg"></i>
                     <span class="nav-label" langtag="scheme-socks5"></span></a>
                 </li>
- 
+
+
+                <li class="{{if eq "global" .menu}}active{{end}}">
+                <a href="{{.web_base_url}}/global/index"><i class="fa fa-cog fa-lg"></i>
+                    <span class="nav-label" langtag="word-globalparam"></span></a>
+                </li>
+
                 <li class="{{if eq "help" .menu}}active{{end}}">
                     <a href="https://github.com/wyx176/nps-socks5" target="_blank"><i class="fa fa-lightbulb fa-lg"></i>
                     <span class="nav-label" langtag="word-help"></span></a>
@@ -106,7 +117,7 @@
             <div class="float-right">
                 <span langtag="word-readmore"></span> <strong><a href="https://github.com/wyx176/nps-socks5" langtag="word-go"></a></strong>
             </div>
-            <div><strong langtag="word-copyright"></strong> <span langtag="application"></span> &copy; 1000-2060</div>
+
         </div>
     </div>
 </div>

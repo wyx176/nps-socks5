@@ -1,323 +1,422 @@
 #!/bin/bash
-export PATH=/usr/local/sbin:/usr/local/bin:/sbin:/bin:/usr/sbin:/usr/bin
-webPort=18080
-errorMsg=反馈群t.me/Scoks55555
-version=v3.0
-downLoadUrl=https://github.com/wyx176/nps-socks5/releases/download/
-serverSoft=linux_amd64_server
-clientSoft=linux_amd64_client
-serverUrl=${downLoadUrl}${version}/${serverSoft}.tar.gz
-clientUrl=${downLoadUrl}${version}/${clientSoft}.tar.gz
-s5Path=/opt/nps-socks5/
-ipAdd=检测失败
 
-if [ -n "$(grep 'Aliyun Linux release' /etc/issue)" -o -e /etc/redhat-release ];then
-    OS=CentOS
-    [ -n "$(grep ' 7\.' /etc/redhat-release)" ] && CentOS_RHEL_version=7
-    [ -n "$(grep ' 6\.' /etc/redhat-release)" -o -n "$(grep 'Aliyun Linux release6 15' /etc/issue)" ] && CentOS_RHEL_version=6
-    [ -n "$(grep ' 5\.' /etc/redhat-release)" -o -n "$(grep 'Aliyun Linux release5' /etc/issue)" ] && CentOS_RHEL_version=5
-elif [ -n "$(grep 'Amazon Linux AMI release' /etc/issue)" -o -e /etc/system-release ];then
-    OS=CentOS
-    CentOS_RHEL_version=6
-elif [ -n "$(grep bian /etc/issue)" -o "$(lsb_release -is 2>/dev/null)" == 'Debian' ];then
-    OS=Debian
-    [ ! -e "$(which lsb_release)" ] && { apt-get -y update; apt-get -y install lsb-release; clear; }
-    Debian_version=$(lsb_release -sr | awk -F. '{print $1}')
-elif [ -n "$(grep Deepin /etc/issue)" -o "$(lsb_release -is 2>/dev/null)" == 'Deepin' ];then
-    OS=Debian
-    [ ! -e "$(which lsb_release)" ] && { apt-get -y update; apt-get -y install lsb-release; clear; }
-    Debian_version=$(lsb_release -sr | awk -F. '{print $1}')
-elif [ -n "$(grep Ubuntu /etc/issue)" -o "$(lsb_release -is 2>/dev/null)" == 'Ubuntu' -o -n "$(grep 'Linux Mint' /etc/issue)" ];then
-    OS=Ubuntu
-    [ ! -e "$(which lsb_release)" ] && { apt-get -y update; apt-get -y install lsb-release; clear; }
-    Ubuntu_version=$(lsb_release -sr | awk -F. '{print $1}')
-    [ -n "$(grep 'Linux Mint 18' /etc/issue)" ] && Ubuntu_version=16
-else
-    echo "Does not support this OS, Please contact the author! "
-    kill -9 $$
+# 文件下载存储路径
+SOCKS5_PATH="/opt/nps-socks5"
+# GitHub仓库信息
+REPO_OWNER="wyx176"
+REPO_NAME="nps-socks5"
+
+# 获取操作系统类型和架构
+OS_TYPE=$(uname -s | tr '[:upper:]' '[:lower:]')
+ARCH=$(uname -m)
+
+# 根据不同的架构设置ARCH_NAME
+case $ARCH in
+    x86_64)
+        ARCH_NAME="amd64"
+        ;;
+    i386|i686)
+        ARCH_NAME="386"
+        ;;
+    armv7l)
+        ARCH_NAME="arm"
+        ;;
+    aarch64)
+        ARCH_NAME="arm64"
+        ;;
+    mips)
+        ARCH_NAME="mips"
+        ;;
+    mips64)
+        ARCH_NAME="mips64"
+        ;;
+    mips64le)
+        ARCH_NAME="mips64le"
+        ;;
+    mipsle)
+        ARCH_NAME="mipsle"
+        ;;
+    *)
+        echo "Unsupported architecture: $ARCH"
+        exit 1
+        ;;
+esac
+
+if [ ! -d "$SOCKS5_PATH" ]; then
+    mkdir -p $SOCKS5_PATH
 fi
 
-#Install Basic Tools
-init(){
-if [[ ${OS} == Ubuntu ]];then
-	apt-get  install git unzip wget -y
-	apt-get  install curl
-fi
-if [[ ${OS} == CentOS ]];then
-	yum install git unzip wget -y
-  yum -y install curl
-fi
-if [[ ${OS} == Debian ]];then
-	apt-get install git unzip wget -y
-	apt-get install curl
-fi
+# 异常日志输出
+function exception_log() {
+    echo "$1 - 反馈群组 https://t.me/Scoks55555"
 }
 
-unstallServer(){
-	if [[ -d ${s5Path}${serverSoft} ]];then
-      cd ${s5Path}${serverSoft} && nps stop && nps uninstall
-      rm -rf /etc/nps
-      rm -rf /usr/bin/nps
-      rm -rf ${s5Path}${serverSoft}
-	fi
-	 echo "卸载服务端成功"
-}
+# 构造文件名
+CLIENT_FILENAME="${OS_TYPE}_${ARCH_NAME}_client.tar.gz"
+SERVER_FILENAME="${OS_TYPE}_${ARCH_NAME}_server.tar.gz"
 
-unstallClient(){
-  if [[ -d ${s5Path}${clientSoft} ]];then
-  	  cd ${s5Path}${clientSoft} && npc stop &&  ./npc uninstall
-    	rm -rf ${s5Path}${clientSoft}
-    	rm -rf ${s5Path}${clientSoft}.tar.gz
-  fi
-  echo "卸载客户端成功"
-}
+API_URL="https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/releases/latest"
 
-allUninstall(){
-  unstallServer
-  unstallClient
-  #删除之前的
-  if [[ -d ${s5Path} ]];then
-	  rm -rf ${s5Path}
-	fi
-}
+echo  "正在获取最新版本信息..."
+# 获取最新的release信息
+LATEST_RELEASE=$(curl -s $API_URL)
 
-checkIp(){
+# 提取下载URL
+CLIENT_DOWNLOAD_URL=$(echo "$LATEST_RELEASE" | grep -oP '"browser_download_url": "\K(.*?'"$CLIENT_FILENAME"'[^"]*)' | head -n 1)
+SERVER_DOWNLOAD_URL=$(echo "$LATEST_RELEASE" | grep -oP '"browser_download_url": "\K(.*?'"$SERVER_FILENAME"'[^"]*)' | head -n 1)
 
-ipAdd=`curl curl ifconfig.co -4 -s --connect-timeout 10`
-clear
-echo "当前ip地址："${ipAdd}
-read -p "如果不对请停止安装或者手动输入服务器ip：(y/n/ip)： " choice
-	
-	if [[ "$choice" == 'n' || "$choice" == 'N' ]]; then
-			echo "安装结束"
-			exit 0
-	elif [[ "${choice}" == '' && "${ipAdd}" == '检测失败' ]]; then
-			echo "安装失败：ip不正确"
-			exit 0
-	
-	elif [[ "$choice" != 'y' && "$choice" != 'Y' && "${choice}" != '' ]]; then
-		check_ip "${choice}"
-	fi
-}
-
-#2.下载服务端
-DownloadServer()
-{
-echo "下载nps-socks5服务中请耐心等待..."
-if [[ ! -d ${s5Path} ]];then
-	mkdir -p ${s5Path}	
+# 检查提取结果是否为空
+if [ -z "$CLIENT_DOWNLOAD_URL" ]; then
+    exception_log "获取最新版本失败，一般是网络问题: $CLIENT_FILENAME"
+    exit 1
 fi
 
-#服务端
-wget -P ${s5Path} --no-cookie --no-check-certificate ${serverUrl} 2>&1 | progressfilt
-
-
-if [[ ! -f ${s5Path}${serverSoft}.tar.gz ]]; then
-	echo "服务端文件下载失败"${errorMsg}
-	exit 0
+if [ -z "$SERVER_DOWNLOAD_URL" ]; then
+    exception_log "获取最新版本失败，一般是网络问题: $SERVER_FILENAME"
+    exit 1
 fi
 
+function downLoad() {
+   local file_name="$1"
+   local download_url="$2"
+   local save_path="$3"
+    if [ -z "$download_url" ]; then
+        echo "Failed to find download URL for $file_name"
+        exit 1
+    fi
+
+    # 显示进度条标题
+    echo "正在下载: $file_name"
+    # 下载文件
+    curl -LJ --progress-bar -o "$save_path/$(basename $download_url)" "$download_url"
 }
 
-DownloadClient()
-{
-echo "下载nps-socks5客户端中请耐心等待..."
-if [[ ! -d ${s5Path} ]];then
-	mkdir -p ${s5Path}	
-fi
+#安装服务端
+function install_server() {
+  local server_path="$SOCKS5_PATH/server"
+  #判断/usr/bin/nps文件是否存在，如果存在则退出脚本停止安装
+    if [ -f "/usr/bin/nps" ] || [ -d "/etc/nps" ]; then
+        exception_log "服务端已安装，请先卸载再安装。"
+        exit 1
+    fi
 
+    # 判断$SOCKS5_PATH是否存在，如果不存在则创建，如果存在则删除对应的服务端文件
+    if [ ! -d $server_path ]; then
+        mkdir -p $server_path
+    else
+        rm -rf "${server_path}"/*
+    fi
 
-#客户端
-wget -P ${s5Path} --no-cookie --no-check-certificate ${clientUrl} 2>&1 | progressfilt
+    #下载服务端文件
+    downLoad "$SERVER_FILENAME" "$SERVER_DOWNLOAD_URL" "$server_path"
+    #判断文件是否下载完毕，如果没下载完毕则退出脚本
+    if [ ! -f "$server_path/$SERVER_FILENAME" ]; then
+        exception_log "服务端文件下载失败，请检查网络连接或重试。 $SERVER_FILENAME"
+        exit 1
+    fi
 
-
-if [[ ! -f ${s5Path}${clientSoft}.tar.gz ]]; then
-	echo "客户端文件下载失败"${errorMsg}
-	exit 0
-fi
-}
-
-#3.安装Socks5服务端程序
-InstallServer()
-{
-echo ""
-echo "服务端文件解压中..."
-
-tar zxvf ${s5Path}${serverSoft}.tar.gz -C ${s5Path}
-
-cd ${s5Path}${serverSoft}
-sudo  ./nps install && nps start
-}
-
-InstallClient()
-{
-
-echo ""
-echo "客户端文件解压中..."
-if [[ ! -d ${s5Path}${clientSoft} ]]; then
-echo "-------------"${s5Path}${clientSoft}
-mkdir -p ${s5Path}${clientSoft}
-fi
-tar zxvf ${s5Path}${clientSoft}.tar.gz -C ${s5Path}${clientSoft}
-
-clear
-echo "客户端文件安装中..."
-cd ${s5Path}${clientSoft}
-if [[ $menuChoice == 1 ]];then
-./npc install  -server=${ipAdd}:8025 -vkey=ij7poeu2d9btjbd3 -type=tcp && npc start
-else
-echo "服务器参数在[服务端]->服务列表+号中"
-echo "类似：./npc -server=xxx.xxx.xxx.172:8025 -vkey=ij7poeu2d9btjbd3 -type=tcp"
-echo "只需要输入:-server=xxx.xxx.xxx.172:8025 -vkey=ij7poeu2d9btjbd3 -type=tcp 即可"
-read -p "请输入服务端参数： " serverParam
-./npc install ${serverParam} && npc start
-fi
-}
-
-
-
-checkServer(){
-#检查服务端是否安装成功
-SPID=`ps -ef|grep nps |grep -v grep|awk '{print $2}'`
-if [[ -z ${SPID} ]]; then
-echo ${SPID}"SPID----------------------"
-echo "服务端安装失败"${errorMsg}
-unstallServer
-exit 0
-fi
-}
-
-
-checkClient(){
-
-CPID=`ps -ef|grep npc |grep -v grep|awk '{print $2}'`
-if [[ -z ${CPID} ]]; then
-echo "客户端安装失败"${errorMsg}
-unstallClient
-exit 0
-fi
-}
-
-
-
-function check_ip(){
-        IP=$1
-        VALID_CHECK=$(echo $IP|awk -F. '$1<=255 && $2<=255 && $3<=255 && $4<=255 {print "yes"}')
-        
-        if echo $IP|grep -E "^[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}$">/dev/null; then
-                if [[ $VALID_CHECK == "yes" ]]; then
-                        return=$IP
-                else
-                        echo "安装失败：ip不正确"
-						exit 0
-                fi
+    # 解压服务端文件，判断解压后是否有nps文件，如果没有则退出脚本
+    tar -zxf "$server_path/$SERVER_FILENAME" -C "$server_path" > /dev/null 2>&1
+    if [ ! -f "$server_path/nps" ]; then
+        exception_log "服务端文件解压失败，请检查文件是否损坏。 $SERVER_FILENAME"
+        exit 1
         else
-               echo "安装失败：非ip"
-			   exit 0
-        fi
+            echo "服务端文件下载成功。"
+    fi
+
+    #执行安装命令sudo ./nps install
+    sudo "$server_path/nps" install > /dev/null 2>&1
+
+    #检测是否包含nps
+    if [ ! -f "/usr/bin/nps" ]; then
+       exception_log "服务端安装失败，未检测到文件信息。"
+       exit 1
+    fi
+
+   #执行nps -version命令判断是否有响应
+   if nps -version >/dev/null 2>&1; then
+       sudo nps start
+       echo "服务端安装成功，启动中..."
+   else
+       exception_log "服务端安装失败，未检测到指令。"
+       exit 1
+   fi
+
+   #检测是否有nps进程
+   if pgrep -f "nps service" >/dev/null; then
+       echo "==服务端服务器启动成功=="
+       echo "默认穿透端口：8024"
+       echo "默认web端口：18080"
+       echo "默认web登录账号：admin"
+       echo "默认web登录密码：admin"
+       echo "服务端配置文件路径：/etc/nps/conf"
+       exception_log "如有防火墙，请放行8024、18080端口"
+   else
+       exception_log "服务端启动失败。"
+       exit 1
+   fi
 }
 
-progressfilt ()
-{
-    local flag=false c count cr=$'\r' nl=$'\n'
-    while IFS='' read -d '' -rn 1 c
-    do
-        if $flag
-        then
-            printf '%s' "$c"
+#卸载服务端
+function uninstall_server() {
+  local server_path="$SOCKS5_PATH/server"
+    #判断/etc/nps文件是否存在
+    if [  -f "/usr/bin/nps" ]; then
+        sudo nps stop
+    fi
+
+    #判断nps进程是否存在，不存在则删除/etc/nps文件夹
+    if ! pgrep -f "nps service" >/dev/null; then
+       rm -rf /etc/nps
+       rm -rf /usr/bin/nps
+    fi
+
+    #判断$server_path是否存在，如果存在则删除对应的服务端文件
+    if [ -d $server_path ]; then
+        rm -rf "$server_path"/*
+    fi
+
+    if [  -f "/usr/bin/nps" ]; then
+        exception_log "服务端卸载失败。"
+        exit 1
         else
-            if [[ $c != $cr && $c != $nl ]]
-            then
-                count=0
-            else
-                ((count++))
-                if ((count > 1))
-                then
-                    flag=true
-                fi
-            fi
-        fi
+            echo "服务端卸载成功。"
+    fi
+}
+
+# 安装客户端
+function install_client() {
+    local client_path="$SOCKS5_PATH/client"
+    # 判断npc进程是否存在
+    if [ -f /usr/bin/npc ] || pgrep -f "npc" >/dev/null; then
+        exception_log "客户端已安装，请先卸载再安装"
+        exit 1
+    fi
+
+    if [ ! -d $client_path ]; then
+        mkdir -p $client_path
+    else
+        rm -rf "${client_path}"/*
+    fi
+    downLoad "$CLIENT_FILENAME" "$CLIENT_DOWNLOAD_URL" "$client_path"
+    if [ ! -f "$client_path/$CLIENT_FILENAME" ]; then
+        exception_log "客户端文件下载失败，请检查网络连接或重试。 $CLIENT_FILENAME"
+        exit 1
+    fi
+    tar -zxf "$client_path/$CLIENT_FILENAME" -C "$client_path" > /dev/null 2>&1
+    if [ ! -f "$client_path/npc" ]; then
+        exception_log "客户端文件解压失败，请检查文件是否损坏。 $CLIENT_FILENAME"
+        exit 1
+    else
+        echo "客户端文件下载成功。"
+    fi
+
+    #请输入服务端IP
+    read -p "请输入服务端IP：" server_ip
+    #判断服务端IP是否为空，为空则退出脚本，不为空则判断是否为IPV4
+    if [ -z "$server_ip" ]; then
+        exception_log "服务端IP不能为空。"
+        exit 1
+    fi
+    if ! [[ $server_ip =~ ^((25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$ ]]; then
+        exception_log "服务端IP格式错误: $server_ip"
+        exit 1
+    fi
+
+    #请输入服务端穿透端口(默认8024)
+    read -p "请输入服务端穿透端口(默认8024)：" server_port
+    #判断服务端穿透端口是否为空，为空则默认8024
+    if [ -z "$server_port" ]; then
+        server_port="8024"
+    fi
+
+    #请输入服务端vkey
+    read -p "请输入服务端vkey：" server_vkey
+    #判断服务端vkey是否为空，为空则退出脚本
+    if [ -z "$server_vkey" ]; then
+        exception_log "服务端vkey不能为空。"
+        exit 1
+    fi
+
+    #执行npc
+    sudo "$client_path"/npc install -server="$server_ip:$server_port" -vkey="$server_vkey" > /dev/null 2>&1
+    sudo npc start > /dev/null 2>&1
+    if pgrep -f "npc" >/dev/null; then
+        echo "==客户端安装启动成功=="
+    else
+        exception_log "客户端安装失败。"
+        exit 1
+    fi
+}
+
+# 卸载客户端
+function uninstall_client() {
+    local client_path="$SOCKS5_PATH/client"
+    if ! [ -f /usr/bin/npc ]; then
+        exception_log "客户端未安装。"
+        exit 1
+    fi
+    #判断npc进程是否存在
+    if pgrep -f "npc" >/dev/null; then
+        sudo npc stop
+    fi
+    sudo npc uninstall
+    #删除客户端路径下的文件
+    if [ -d "$client_path" ]; then
+        rm -rf "$client_path"/*
+    fi
+    #删除/usr/bin/npc文件
+    if [ -f "/usr/bin/npc" ]; then
+        rm -rf /usr/bin/npc
+    fi
+    echo "客户端卸载成功。"
+}
+
+# 启动服务端
+function start_server() {
+    #判断服务端是否安装
+    if [ ! -f "/usr/bin/nps" ]; then
+        exception_log "服务端未安装，请先安装服务端。"
+        exit 1
+    fi
+    if pgrep -f "nps service" >/dev/null; then
+        echo "服务端运行中，无需启动"
+        exit 0
+    else
+        sudo nps start
+    fi
+    if pgrep -f "nps service" >/dev/null; then
+        echo "服务端启动成功"
+        exit 0
+    else
+        exception_log "服务端启动失败"
+        exit 1
+    fi
+}
+
+# 停止服务端
+function stop_server() {
+    #判断服务端是否安装
+    if [ ! -f "/usr/bin/nps" ]; then
+        exception_log "服务端未安装，请先安装服务端。"
+        exit 1
+    fi
+    if pgrep -f "nps service" >/dev/null; then
+        sudo nps stop
+    else
+        echo "服务端未运行，无需停止。"
+        exit 0
+    fi
+    if pgrep -f "nps service" >/dev/null; then
+        exception_log "服务端停止失败。"
+        exit 1
+    else
+        echo "服务端停止成功。"
+    fi
+}
+
+# 启动客户端
+function start_client() {
+    #判断客户端是否安装
+    if [ ! -f "/usr/bin/npc" ]; then
+        exception_log "客户端未安装，请先安装客户端。"
+        exit 1
+    fi
+    if pgrep -f "npc" >/dev/null; then
+        echo "客户端运行中，无需启动。"
+        exit 0
+    else
+        sudo npc start
+    fi
+    if pgrep -f "npc" >/dev/null; then
+        echo "客户端启动成功。"
+        else
+            exception_log "客户端启动失败。"
+            exit 1
+    fi
+}
+
+# 停止客户端
+function stop_client() {
+    #判断客户端是否安装
+    if [ ! -f "/usr/bin/npc" ]; then
+        exception_log "客户端未安装，请先安装客户端。"
+        exit 1
+    fi
+    if pgrep -f "npc" >/dev/null; then
+        sudo npc stop
+    else
+        echo "客户端未运行，无需停止。"
+        exit 0
+    fi
+    if pgrep -f "npc" >/dev/null; then
+        exception_log "客户端停止失败。"
+        exit 1
+    else
+        echo "客户端停止成功。"
+    fi
+}
+# 菜单
+function menu() {
+    clear
+    # 定义菜单项数组
+    local options=(
+        "1. 安装服务端"
+        "2. 安装客户端"
+        "============="
+        "3. 卸载服务端"
+        "4. 卸载客户端"
+        "============="
+        "5. 启动服务端"
+        "6. 启动客户端"
+        "============="
+        "7. 关闭服务端"
+        "8. 关闭客户端"
+        "============="
+        "0. 退出"
+    )
+
+    # 打印菜单
+    for option in "${options[@]}"; do
+        echo "$option"
     done
-}
 
+    # 获取用户选择
+    read -p "请选择操作：" choice
 
-menu(){
-echo '1.全部安装(推荐只有"一台"服务器情况下)'
-echo '2.安装服务端(推荐安装在"国内"服务器[中转机])'
-echo '3.安装客户端(推荐安装在"国外"服务器)'
-echo "4.卸载服务端"
-echo "5.卸载客户端"
-echo "6.全卸载"
-echo "0.退出"
-while :; do echo
-	read -p "请选择： " menuChoice
-	if [[ ! $menuChoice =~ ^[0-6]$ ]]; then
-		echo "输入错误! 请输入正确的数字!"
-	else
-		break	
-	fi
-done
-
-
-if [[ $menuChoice == 0 ]];then
-	exit 0
-fi	
-
-if [[ $menuChoice == 1 ]];then
-	#安装服务端
-	init
-	checkIp
-	
-	allUninstall
-	DownloadServer
-	DownloadClient
-	InstallServer
-	InstallClient
-	checkServer
-	checkClient
-	clear
-	echo "--安装成功------"${errorMsg}
-	echo "--后台管理地址"${ipAdd}":"${webPort}
-	echo "--登录账号admin"
-	echo "--登录密码admin"
-	echo "默认socks5账号信息:账号socks5 密码socks5 端口5555"
-	echo "如需修改后台管理端口以及账号密码请看github"
-
-fi
-if [[ $menuChoice == 2 ]];then
-	init
-	checkIp
-	unstallServer
-	DownloadServer
-	InstallServer
-	checkServer
-	clear
-	echo "--安装成功------"${errorMsg}
-	echo "--后台管理地址"${ipAdd}":"${webPort}
-	echo "--登录账号admin"
-	echo "--登录密码admin"
-fi
-
-if [[ $menuChoice == 3 ]];then
-	clear
-	unstallClient
-	DownloadClient
-	clear
-	InstallClient
-	checkClient
-	echo "--安装成功------"${errorMsg}
-fi
-if [[ $menuChoice == 4 ]];then
-unstallServer
-fi
-
-if [[ $menuChoice == 5 ]];then
-unstallClient
-fi
-
-if [[ $menuChoice == 6 ]];then
-allUninstall
-fi
+    # 处理用户输入
+    case $choice in
+        1)
+            install_server
+            ;;
+        2)
+            install_client
+            ;;
+        3)
+            uninstall_server
+            ;;
+        4)
+            uninstall_client
+            ;;
+        5)
+            start_server
+            ;;
+        6)
+            start_client
+            ;;
+        7)
+            stop_server
+            ;;
+        8)
+            stop_client
+            ;;
+        0)
+            exit 0
+            ;;
+        *)
+            echo "无效的选择，请重新输入。"
+            menu
+            ;;
+    esac
 }
 menu
-

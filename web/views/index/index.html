@@ -6,7 +6,7 @@
                     <h5 langtag="word-connectionport"></h5>
                 </div>
                 <div class="ibox-content">
-                    <h1 class="no-margins">{{.p}}</h1>
+                    <h1 class="no-margins">{{.p1}}</h1>
                 </div>
             </div>
         </div>
@@ -45,6 +45,7 @@
         </div>
     </div>
 
+
     <div class="row">
         <div class="col-lg-6">
             <div class="ibox float-e-margins">
@@ -62,17 +63,6 @@
                 </div>
                 <div class="ibox-content no-padding">
                     <ul class="list-group">
-                        <li class="list-group-item">
-                            <div class="row">
-                                <div class="col-sm-6">
-                                    <strong langtag="word-bridgingmode"></strong>
-                                </div>
-                                <div class="col-sm-6 text-right">
-                                    <strong>{{.data.bridgeType}}</strong>
-                                </div>
-                            </div>
-                        </li>
-                        
                         <li class="list-group-item ">
                             <div class="row">
                                 <div class="col-sm-6">
@@ -103,7 +93,7 @@
                                 </div>
                             </div>
                         </li>
-                        
+
                         <li class="list-group-item ">
                             <div class="row">
                                 <div class="col-sm-6">
@@ -111,16 +101,6 @@
                                 </div>
                                 <div class="col-sm-6 text-right">
                                     <strong>{{.data.serverIp}}</strong>
-                                </div>
-                            </div>
-                        </li>
-                        <li class="list-group-item ">
-                            <div class="row">
-                                <div class="col-sm-6">
-                                    <strong langtag="word-serverversion"></strong>
-                                </div>
-                                <div class="col-sm-6 text-right">
-                                    <strong>{{.data.version}}</strong>
                                 </div>
                             </div>
                         </li>
@@ -189,16 +169,7 @@
                                 </div>
                             </div>
                         </li>
-                        <li class="list-group-item ">
-                            <div class="row">
-                                <div class="col-sm-6">
-                                    <strong langtag="word-udpconnections_established"></strong>
-                                </div>
-                                <div class="col-sm-6 text-right">
-                                    <strong id="overview_udp"></strong>
-                                </div>
-                            </div>
-                        </li>
+
                         <li class="list-group-item ">
                             <div class="row">
                                 <div class="col-sm-6">
@@ -326,7 +297,7 @@
 {{end}}
 
     <div class="row">
-        <div class="col-lg-6">
+        <div class="col-lg-12">
             <div class="ibox float-e-margins">
                 <div class="ibox-title">
                     <h5 langtag="word-trafficstatistics"></h5>
@@ -344,24 +315,24 @@
                 </div>
             </div>
         </div>
-        <!-- <div class="col-lg-6"> -->
-            <!-- <div class="ibox float-e-margins"> -->
-                <!-- <div class="ibox-title"> -->
-                    <!-- <h5 langtag="word-type"></h5> -->
-                    <!-- <div class="ibox-tools"> -->
-                        <!-- <a class="collapse-link"> -->
-                            <!-- <i class="fa fa-chevron-up"></i> -->
-                        <!-- </a> -->
-                        <!-- <a class="close-link"> -->
-                            <!-- <i class="fa fa-times"></i> -->
-                        <!-- </a> -->
-                    <!-- </div> -->
-                <!-- </div> -->
-                <!-- <div class="ibox-content"> -->
-                    <!-- <div id="counts" style="height:400px;"></div> -->
-                <!-- </div> -->
-            <!-- </div> -->
-        <!-- </div> -->
+<!--        <div class="col-lg-6">-->
+<!--            <div class="ibox float-e-margins">-->
+<!--                <div class="ibox-title">-->
+<!--                    <h5 langtag="word-type"></h5>-->
+<!--                    <div class="ibox-tools">-->
+<!--                        <a class="collapse-link">-->
+<!--                            <i class="fa fa-chevron-up"></i>-->
+<!--                        </a>-->
+<!--                        <a class="close-link">-->
+<!--                            <i class="fa fa-times"></i>-->
+<!--                        </a>-->
+<!--                    </div>-->
+<!--                </div>-->
+<!--                <div class="ibox-content">-->
+<!--                    <div id="counts" style="height:400px;"></div>-->
+<!--                </div>-->
+<!--            </div>-->
+<!--        </div>-->
 
 
     </div>

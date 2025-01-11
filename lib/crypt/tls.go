@@ -30,6 +30,10 @@ func InitTls() {
 	}
 }
 
+func GetCert() tls.Certificate {
+	return cert
+}
+
 func NewTlsServerConn(conn net.Conn) net.Conn {
 	var err error
 	if err != nil {

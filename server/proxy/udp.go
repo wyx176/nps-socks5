@@ -46,6 +46,17 @@ func (s *UdpModeServer) Start() error {
 			}
 			continue
 		}
+
+		// 判断访问地址是否在全局黑名单内
+		if IsGlobalBlackIp(addr.String()) {
+			break
+		}
+
+		// 判断访问地址是否在黑名单内
+		if common.IsBlackIp(addr.String(), s.task.Client.VerifyKey, s.task.Client.BlackIpList) {
+			break
+		}
+
 		logs.Trace("New udp connection,client %d,remote address %s", s.task.Client.Id, addr)
 		go s.process(addr, buf[:n])
 	}
@@ -56,8 +67,12 @@ func (s *UdpModeServer) process(addr *net.UDPAddr, data []byte) {
 	if v, ok := s.addrMap.Load(addr.String()); ok {
 		clientConn, ok := v.(io.ReadWriteCloser)
 		if ok {
-			clientConn.Write(data)
-			s.task.Flow.Add(int64(len(data)), 0)
+			_, err := clientConn.Write(data)
+			if err != nil {
+				logs.Warn(err)
+				return
+			}
+			s.task.Client.Flow.Add(int64(len(data)), int64(len(data)))
 		}
 	} else {
 		if err := s.CheckFlowAndConnNum(s.task.Client); err != nil {
@@ -73,22 +88,34 @@ func (s *UdpModeServer) process(addr *net.UDPAddr, data []byte) {
 			s.addrMap.Store(addr.String(), target)
 			defer target.Close()
 
-			target.Write(data)
+			_, err := target.Write(data)
+			if err != nil {
+				logs.Warn(err)
+				return
+			}
 
 			buf := common.BufPoolUdp.Get().([]byte)
 			defer common.BufPoolUdp.Put(buf)
 
-			s.task.Flow.Add(int64(len(data)), 0)
+			s.task.Client.Flow.Add(int64(len(data)), int64(len(data)))
 			for {
-				clientConn.SetReadDeadline(time.Now().Add(time.Minute * 10))
+				clientConn.SetReadDeadline(time.Now().Add(time.Duration(60) * time.Second))
 				if n, err := target.Read(buf); err != nil {
 					s.addrMap.Delete(addr.String())
 					logs.Warn(err)
 					return
 				} else {
-					s.listener.WriteTo(buf[:n], addr)
-					s.task.Flow.Add(0, int64(n))
+					_, err := s.listener.WriteTo(buf[:n], addr)
+					if err != nil {
+						logs.Warn(err)
+						return
+					}
+					s.task.Client.Flow.Add(int64(n), int64(n))
 				}
+				//if err := s.CheckFlowAndConnNum(s.task.Client); err != nil {
+				//	logs.Warn("client id %d, task id %d,error %s, when udp connection", s.task.Client.Id, s.task.Id, err.Error())
+				//	return
+				//}
 			}
 		}
 	}

@@ -7,6 +7,8 @@ import (
 	"encoding/binary"
 	"errors"
 	"fmt"
+	"github.com/astaxie/beego"
+	"github.com/astaxie/beego/logs"
 	"html/template"
 	"io"
 	"io/ioutil"
@@ -14,9 +16,11 @@ import (
 	"net/http"
 	"os"
 	"regexp"
+	"sort"
 	"strconv"
 	"strings"
 	"sync"
+	"time"
 
 	"ehang.io/nps/lib/crypt"
 )
@@ -30,6 +34,10 @@ func GetHostByName(hostname string) string {
 	if ips != nil {
 		for _, v := range ips {
 			if v.To4() != nil {
+				return v.String()
+			}
+			// If IPv4 not found, return IPv6
+			if v.To16() != nil {
 				return v.String()
 			}
 		}
@@ -100,24 +108,43 @@ func Getverifyval(vkey string) string {
 }
 
 // Change headers and host of request
-func ChangeHostAndHeader(r *http.Request, host string, header string, addr string, addOrigin bool) {
+func ChangeHostAndHeader(r *http.Request, host string, header string, addr string) {
+	// 设置 Host 头部信息
 	if host != "" {
 		r.Host = host
 	}
+
+	// 设置自定义头部信息
 	if header != "" {
-		h := strings.Split(header, "\n")
+		h := strings.Split(strings.ReplaceAll(header, "\r\n", "\n"), "\n")
 		for _, v := range h {
-			hd := strings.Split(v, ":")
+			hd := strings.SplitN(v, ":", 2)
 			if len(hd) == 2 {
-				r.Header.Set(hd[0], hd[1])
+				r.Header.Set(strings.TrimSpace(hd[0]), strings.TrimSpace(hd[1]))
 			}
 		}
 	}
-	addr = strings.Split(addr, ":")[0]
+
+	logs.Debug("get X-Remote-Addr = " + addr)
+	// 处理 IPv6 地址
+	if strings.HasPrefix(addr, "[") && strings.Contains(addr, "]") {
+		addr = addr[1:strings.LastIndex(addr, "]")]
+	} else {
+		addr = strings.Split(addr, ":")[0]
+	}
+	logs.Debug("get X-Remote-IP = " + addr)
+
+	// 获取 X-Forwarded-For 头部的先前值
 	if prior, ok := r.Header["X-Forwarded-For"]; ok {
 		addr = strings.Join(prior, ", ") + ", " + addr
 	}
+
+	// 判断是否需要添加真实 IP 信息
+	var addOrigin, _ = beego.AppConfig.Bool("http_add_origin_header")
+
+	// 添加 X-Forwarded-For 和 X-Real-IP 头部信息
 	if addOrigin {
+		logs.Debug("set X-Forwarded-For X-Real-IP = " + addr)
 		r.Header.Set("X-Forwarded-For", addr)
 		r.Header.Set("X-Real-IP", addr)
 	}
@@ -258,21 +285,71 @@ func FormatAddress(s string) string {
 
 // get address from the complete address
 func GetIpByAddr(addr string) string {
+	// Handle IPv6 addresses properly
+	if strings.HasPrefix(addr, "[") && strings.Contains(addr, "]:") {
+		lastBracketIndex := strings.LastIndex(addr, "]")
+		if lastBracketIndex != -1 {
+			return addr[1:lastBracketIndex]
+		}
+	} else if strings.Contains(addr, ":") {
+		lastColonIndex := strings.LastIndex(addr, ":")
+		if lastColonIndex != -1 && strings.Count(addr, ":") > 1 {
+			return addr[:lastColonIndex]
+		}
+	}
 	arr := strings.Split(addr, ":")
 	return arr[0]
 }
 
 // get port from the complete address
 func GetPortByAddr(addr string) int {
+	// Handle IPv6 addresses properly
+	if strings.HasPrefix(addr, "[") && strings.Contains(addr, "]:") {
+		lastColonIndex := strings.LastIndex(addr, ":")
+		p, err := strconv.Atoi(addr[lastColonIndex+1:])
+		if err != nil {
+			return 0
+		}
+		return p
+	} else if strings.Contains(addr, ":") {
+		lastColonIndex := strings.LastIndex(addr, ":")
+		if lastColonIndex != -1 && strings.Count(addr, ":") > 1 {
+			p, err := strconv.Atoi(addr[lastColonIndex+1:])
+			if err != nil {
+				return 0
+			}
+			return p
+		}
+	}
 	arr := strings.Split(addr, ":")
 	if len(arr) < 2 {
 		return 0
 	}
-	p, err := strconv.Atoi(arr[1])
+	p, err := strconv.Atoi(arr[len(arr)-1])
 	if err != nil {
 		return 0
 	}
 	return p
+}
+
+func in(target string, str_array []string) bool {
+	sort.Strings(str_array)
+	index := sort.SearchStrings(str_array, target)
+	if index < len(str_array) && str_array[index] == target {
+		return true
+	}
+	return false
+}
+
+// 判断访问地址是否在黑名单内
+func IsBlackIp(ipPort, vkey string, blackIpList []string) bool {
+	ip := GetIpByAddr(ipPort)
+	if in(ip, blackIpList) {
+		logs.Error("IP地址[" + ip + "]在隧道[" + vkey + "]黑名单列表内")
+		return true
+	}
+
+	return false
 }
 
 func CopyBuffer(dst io.Writer, src io.Reader, label ...string) (written int64, err error) {
@@ -345,8 +422,9 @@ func GetEnvMap() map[string]string {
 func TrimArr(arr []string) []string {
 	newArr := make([]string, 0)
 	for _, v := range arr {
-		if v != "" {
-			newArr = append(newArr, v)
+		trimmed := strings.TrimSpace(v) // 去除前后空白
+		if trimmed != "" {
+			newArr = append(newArr, trimmed)
 		}
 	}
 	return newArr
@@ -426,10 +504,10 @@ func GetIntranetIp() (error, string) {
 		return nil, ""
 	}
 	for _, address := range addrs {
-		// 检查ip地址判断是否回环地址
+		// 检查 IP 地址判断是否为回环地址
 		if ipnet, ok := address.(*net.IPNet); ok && !ipnet.IP.IsLoopback() {
-			if ipnet.IP.To4() != nil {
-				return nil, ipnet.IP.To4().String()
+			if ipnet.IP.To4() != nil || ipnet.IP.To16() != nil {
+				return nil, ipnet.IP.String()
 			}
 		}
 	}
@@ -452,6 +530,13 @@ func IsPublicIP(IP net.IP) bool {
 			return true
 		}
 	}
+	// Check for IPv6 private addresses
+	if ip6 := IP.To16(); ip6 != nil {
+		if ip6.IsPrivate() {
+			return false
+		}
+		return true
+	}
 	return false
 }
 
@@ -465,4 +550,15 @@ func GetServerIpByClientIp(clientIp net.IP) string {
 
 func PrintVersion() {
 	fmt.Printf("Version: %s\nCore version: %s\nSame core version of client and server can connect each other\n", version.VERSION, version.GetVersion())
+}
+
+func IsExpired(expiredTime string) bool {
+	if expiredTime == "" {
+		return false
+	}
+	t, err := time.Parse("2006-01-02 15:04:05", expiredTime)
+	if err != nil {
+		return false
+	}
+	return time.Now().After(t)
 }

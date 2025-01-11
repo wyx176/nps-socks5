@@ -142,7 +142,7 @@ func (s *Sock5ModeServer) doConnect(c net.Conn, command uint8) {
 	}
 	s.DealClient(conn.NewConn(c), s.task.Client, addr, nil, ltype, func() {
 		s.sendReply(c, succeeded)
-	}, s.task.Flow, s.task.Target.LocalProxy)
+	}, s.task.Flow, s.task.Target.LocalProxy, nil)
 	return
 }
 
@@ -344,6 +344,9 @@ func (s *Sock5ModeServer) Auth(c net.Conn) error {
 	if s.task.MultiAccount != nil {
 		// enable multi user auth
 		U = string(user)
+		if len(U) == 0 {
+			return errors.New("验证不通过")
+		}
 		var ok bool
 		P, ok = s.task.MultiAccount.AccountMap[U]
 		if !ok {
@@ -370,14 +373,14 @@ func (s *Sock5ModeServer) Auth(c net.Conn) error {
 // start
 func (s *Sock5ModeServer) Start() error {
 	return conn.NewTcpListenerAndProcess(s.task.ServerIp+":"+strconv.Itoa(s.task.Port), func(c net.Conn) {
-		if err := s.CheckFlowAndConnNum(s.task.Client); err != nil {
+		if err := s.CheckFlowAndConnNumByPort(s.task.PortConfig, s.task.Client); err != nil {
 			logs.Warn("client id %d, task id %d, error %s, when socks5 connection", s.task.Client.Id, s.task.Id, err.Error())
 			c.Close()
 			return
 		}
 		logs.Trace("New socks5 connection,client %d,remote address %s", s.task.Client.Id, c.RemoteAddr())
 		s.handleConn(c)
-		s.task.Client.AddConn()
+		s.task.PortConfig.AddConn()
 	}, &s.listener)
 }
 

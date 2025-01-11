@@ -1,11 +1,14 @@
-@import url("https://fonts.googleapis.com/css?family=Open+Sans:300,400,600,700");
-@import url("https://fonts.googleapis.com/css?family=Roboto:400,300,500,700");
+/*@import url("https://fonts.googleapis.com/css?family=Open+Sans:300,400,600,700");*/
+/*@import url("https://fonts.googleapis.com/css?family=Roboto:400,300,500,700");*/
 /*
  *
  *   INSPINIA - Responsive Admin Theme
  *   version 2.9.3
  *
 */
+.hidden{
+  display: none;
+}
 @font-face {
   font-family: 'Glyphicons Halflings';
   src: url('../fonts/glyphicons-halflings-regular.eot');
@@ -5735,13 +5738,13 @@ body.mini-navbar.fixed-sidebar .logo-element {
 }
 .logo-name {
   color: #e6e6e6;
-  font-size: 10px;
-  font-weight: 70;
-  letter-spacing: -3px;
+  font-size: 180px;
+  font-weight: 800;
+  letter-spacing: -10px;
   margin-bottom: 0;
 }
 .middle-box h1 {
-  font-size: 60px;
+  font-size: 170px;
 }
 .wrapper .middle-box {
   margin-top: 140px;

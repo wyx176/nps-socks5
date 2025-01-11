@@ -2,6 +2,7 @@ package tool
 
 import (
 	"math"
+	"math/rand"
 	"strconv"
 	"time"
 
@@ -48,6 +49,20 @@ func TestServerPort(p int, m string) (b bool) {
 		b = common.TestTcpPort(p)
 	}
 	return
+}
+
+func GenerateServerPort(m string) int {
+	for {
+		//生成随机数 1024 - 65535
+		serverPort := rand.Intn(65535)
+		if serverPort < 1024 {
+			serverPort = 1024
+		}
+
+		if TestServerPort(serverPort, m) {
+			return serverPort
+		}
+	}
 }
 
 func getSeverStatus() {

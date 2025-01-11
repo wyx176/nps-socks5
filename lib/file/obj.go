@@ -51,6 +51,9 @@ type Client struct {
 	ConfigConnAllow bool       //is allow connected by config file
 	MaxTunnelNum    int
 	Version         string
+	BlackIpList     []string
+	CreateTime      string
+	LastOnlineTime  string
 	sync.RWMutex
 }
 
@@ -76,11 +79,25 @@ func (s *Client) CutConn() {
 	atomic.AddInt32(&s.NowConn, 1)
 }
 
+func (s *PortConfig) CutConn() {
+	atomic.AddInt32(&s.NowConn, 1)
+}
+
 func (s *Client) AddConn() {
 	atomic.AddInt32(&s.NowConn, -1)
 }
+func (p *PortConfig) AddConn() {
+	atomic.AddInt32(&p.NowConn, -1)
+}
 
 func (s *Client) GetConn() bool {
+	if s.MaxConn == 0 || int(s.NowConn) < s.MaxConn {
+		s.CutConn()
+		return true
+	}
+	return false
+}
+func (s *PortConfig) GetConn() bool {
 	if s.MaxConn == 0 || int(s.NowConn) < s.MaxConn {
 		s.CutConn()
 		return true
@@ -108,6 +125,14 @@ func (s *Client) GetTunnelNum() (num int) {
 		}
 		return true
 	})
+
+	GetDb().JsonDb.Hosts.Range(func(key, value interface{}) bool {
+		v := value.(*Host)
+		if v.Client.Id == s.Id {
+			num++
+		}
+		return true
+	})
 	return
 }
 
@@ -128,8 +153,8 @@ type Tunnel struct {
 	Id           int
 	Port         int
 	S5User       string
+	PortConfig   *PortConfig
 	CreateTime   string
-	ExpireTime   string
 	ServerIp     string
 	Mode         string
 	Status       bool
@@ -141,6 +166,7 @@ type Tunnel struct {
 	Remark       string
 	TargetAddr   string
 	NoStore      bool
+	IsHttp       bool
 	LocalPath    string
 	StripPre     string
 	Target       *Target
@@ -174,6 +200,7 @@ type Host struct {
 	KeyFilePath  string
 	NoStore      bool
 	IsClose      bool
+	AutoHttps    bool // 自动https
 	Flow         *Flow
 	Client       *Client
 	Target       *Target //目标
@@ -210,4 +237,18 @@ func (s *Target) GetRandomTarget() (string, error) {
 	}
 	s.nowIndex++
 	return s.TargetArr[s.nowIndex], nil
+}
+
+type Glob struct {
+	BlackIpList []string
+	sync.RWMutex
+}
+
+type PortConfig struct {
+	FlowLimit  int64
+	RateLimit  int //rate limit
+	MaxConn    int //the max connection num of client allow
+	NowConn    int32
+	ExpireTime string
+	sync.RWMutex
 }

@@ -34,24 +34,33 @@
                             </select>
                         </div>
                     </div>
-                {{if eq false .https_just_proxy}}
+
+                    <div class="form-group" id="AutoHttps">
+                        <label class="control-label font-bold">自动HTTPS（301）</label>
+                        <div class="col-sm-10">
+                            <select class="form-control" name="AutoHttps">
+                                <option {{if eq false .h.AutoHttps}}selected{{end}} value="0" langtag="word-no"></option>
+                                <option {{if eq true .h.AutoHttps}}selected{{end}}  value="1" langtag="word-yes"></option>
+                            </select>
+                        </div>
+                    </div>
+
                     <div class="form-group" id="cert_file">
                         <label class="control-label font-bold" langtag="word-httpscert"></label>
                         <div class="col-sm-10">
-                            <input value="{{.h.CertFilePath}}" class="form-control" type="text" name="cert_file_path" placeholder="" langtag="info-unrestricted">
+                            <textarea  rows="6" class="form-control" type="text" name="cert_file_path" id="pemText" placeholder="请将证书文件拖拽或将内容复制粘贴到此处，证书文件格式为：xxxx_example.com.pem">{{.h.CertFilePath}}</textarea>
                         </div>
                     </div>
                     <div class="form-group" id="key_file">
                         <label class="control-label font-bold" langtag="word-httpskey"></label>
                         <div class="col-sm-10">
-                            <input value="{{.h.KeyFilePath}}" class="form-control" type="text" name="key_file_path" placeholder="" langtag="info-unrestricted">
+                            <textarea rows="6" class="form-control" type="text" name="key_file_path" id="pemKey" placeholder="请将私钥文件拖拽或复制粘贴到此处，证书秘钥格式为：xxxx_example.com.key">{{.h.KeyFilePath}}</textarea>
                         </div>
                     </div>
-                {{end}}
                     <div class="form-group">
                         <label class="control-label font-bold" langtag="word-urlroute"></label>
                         <div class="col-sm-10">
-                            <input value="{{.h.Location}}" class="form-control" type="text" name="location" placeholder="" langtag="info-unrestricted">
+                            <input value="{{.h.Location}}" class="form-control" type="text" name="location"  placeholder="" langtag="info-unrestricted">
                         </div>
                     </div>
                 {{if eq true .allow_local_proxy}}
@@ -103,13 +112,66 @@
 
 <script>
     $(function () {
+        if ($("#scheme_select").val() == "all" || $("#scheme_select").val() == "https") {
+            $("#cert_file").css("display", "block")
+            $("#key_file").css("display", "block")
+            $("#AutoHttps").css("display", "block")
+        } else {
+            $("#cert_file").css("display", "none")
+            $("#key_file").css("display", "none")
+            $("#AutoHttps").css("display", "none")
+        }
+
+
+        const pemText = document.getElementById("pemText");
+        const pemKey = document.getElementById("pemKey");
+
+        // 阻止浏览器默认打开文件的行为
+        document.addEventListener("dragover", function(event) {
+            event.preventDefault();
+        });
+
+        pemText.addEventListener("drop", function(event) {
+            event.preventDefault();
+            const file = event.dataTransfer.files[0];
+            const reader = new FileReader();
+
+            reader.onload = function(e) {
+                pemText.value = e.target.result;
+                console.log("上传pem")
+                $('#edit_form').data('bootstrapValidator').updateStatus('pemText', 'NOT_VALIDATED');
+                $('#edit_form').data('bootstrapValidator').validateField('pemText');
+            }
+
+            reader.readAsText(file);
+        });
+
+        pemKey.addEventListener("drop", function(event) {
+            event.preventDefault();
+            const file = event.dataTransfer.files[0];
+            const reader = new FileReader();
+
+            reader.onload = function(e) {
+                pemKey.value = e.target.result;
+                $('#edit_form').data('bootstrapValidator').updateStatus('pemKey', 'NOT_VALIDATED');
+                $('#edit_form').data('bootstrapValidator').validateField('pemKey');
+            }
+
+            reader.readAsText(file);
+        });
+
+
+
+
         $("#scheme_select").on("change", function () {
             if ($("#scheme_select").val() == "all" || $("#scheme_select").val() == "https") {
                 $("#cert_file").css("display", "block")
                 $("#key_file").css("display", "block")
+                $("#AutoHttps").css("display", "block")
             } else {
                 $("#cert_file").css("display", "none")
                 $("#key_file").css("display", "none")
+                $("#AutoHttps").css("display", "none")
             }
         })
     })

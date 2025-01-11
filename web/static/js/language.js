@@ -59,7 +59,7 @@
 	$.fn.cloudLang = function () {
 		$.ajax({
 			type: 'GET',
-			url: window.nps.web_base_url + '/static/page/languages.xml',
+			url: window.nps.web_base_url + '/static/page/languages.xml?v=20250107',
 			dataType: 'xml',
 			success: function (xml) {
 				languages['content'] = xml2json($(xml).children())['content'];
@@ -157,10 +157,27 @@ function submitform(action, url, postdata) {
                 success: function (res) {
                     alert(langreply(res.msg));
                     if (res.status) {
-                        if (postsubmit) {document.location.reload();}else{history.back(-1);}
+                        if (postsubmit) {
+							document.location.reload();
+						}else{
+							window.location.href= document.referrer
+						}
                     }
                 }
             });
+			return;
+		case 'global':
+			$.ajax({
+				type: "POST",
+				url: url,
+				data: postdata,
+				success: function (res) {
+					alert(langreply(res.msg));
+					if (res.status) {
+						document.location.reload();
+					}
+				}
+			});
     }
 }
 

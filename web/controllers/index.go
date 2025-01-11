@@ -84,7 +84,7 @@ func (s *IndexController) GetTunnel() {
 	start, length := s.GetAjaxParams()
 	taskType := s.getEscapeString("type")
 	clientId := s.GetIntNoErr("client_id")
-	list, cnt := server.GetTunnel(start, length, taskType, clientId, s.getEscapeString("search"))
+	list, cnt := server.GetTunnel(start, length, taskType, clientId, s.getEscapeString("search"), s.getEscapeString("sort"), s.getEscapeString("order"))
 	s.AjaxTable(list, cnt, cnt, nil)
 }
 
@@ -107,27 +107,37 @@ func (s *IndexController) Add() {
 		s.SetInfo("add tunnel")
 		s.display()
 	} else {
+		id := int(file.GetDb().JsonDb.GetTaskId())
 		t := &file.Tunnel{
-			Port:         s.GetIntNoErr("port"),
-			ServerIp:     s.getEscapeString("server_ip"),
-			Mode:         s.getEscapeString("type"),
-			Target:       &file.Target{TargetStr: s.getEscapeString("target"), LocalProxy: s.GetBoolNoErr("local_proxy")},
-			Id:           int(file.GetDb().JsonDb.GetTaskId()),
-			Status:       true,
-			Remark:       s.getEscapeString("remark"),
-			Password:     s.getEscapeString("password"),
-			LocalPath:    s.getEscapeString("local_path"),
-			StripPre:     s.getEscapeString("strip_pre"),
-			Flow:         &file.Flow{},
-			S5User:       s.getEscapeString("S5User"),
+			Port:      s.GetIntNoErr("port"),
+			ServerIp:  s.getEscapeString("server_ip"),
+			Mode:      s.getEscapeString("type"),
+			Target:    &file.Target{TargetStr: s.getEscapeString("target"), LocalProxy: s.GetBoolNoErr("local_proxy")},
+			Id:        id,
+			Status:    true,
+			Remark:    s.getEscapeString("remark"),
+			Password:  s.getEscapeString("password"),
+			LocalPath: s.getEscapeString("local_path"),
+			StripPre:  s.getEscapeString("strip_pre"),
+			Flow:      &file.Flow{},
+			S5User:    s.getEscapeString("S5User"),
+			PortConfig: &file.PortConfig{
+				FlowLimit:  int64(s.GetIntNoErr("flow_limit")),
+				RateLimit:  s.GetIntNoErr("rate_limit"),
+				MaxConn:    s.GetIntNoErr("max_conn"),
+				ExpireTime: s.getEscapeString("expire_time"),
+			},
 			CreateTime:   time.Now().Format(common.DEFAULT_TIME),
-			ExpireTime:   s.getEscapeString("expire_time"),
 			MultiAccount: &file.MultiAccount{AccountMap: authStrToMap(s.getEscapeString("S5User"))},
 		}
-		if t.Mode == "socks5" && t.S5User == "" {
-			s.AjaxErr("The account number cannot be empty")
-			return
+		//if t.Mode == "socks5" && t.S5User == "" {
+		//	s.AjaxErr("The account number cannot be empty")
+		//	return
+		//}
+		if t.Port <= 0 {
+			t.Port = tool.GenerateServerPort(t.Mode)
 		}
+
 		if !tool.TestServerPort(t.Port, t.Mode) {
 			s.AjaxErr("The port cannot be opened because it may has been occupied or is no longer allowed.")
 		}
@@ -138,14 +148,13 @@ func (s *IndexController) Add() {
 		if t.Client.MaxTunnelNum != 0 && t.Client.GetTunnelNum() >= t.Client.MaxTunnelNum {
 			s.AjaxErr("The number of tunnels exceeds the limit")
 		}
-
 		if err := file.GetDb().NewTask(t); err != nil {
 			s.AjaxErr(err.Error())
 		}
 		if err := server.AddTask(t); err != nil {
 			s.AjaxErr(err.Error())
 		} else {
-			s.AjaxOk("add success")
+			s.AjaxOkWithId("add success", id)
 		}
 	}
 }
@@ -182,16 +191,21 @@ func (s *IndexController) Edit() {
 				t.Client = client
 			}
 			if s.GetIntNoErr("port") != t.Port {
+				t.Port = s.GetIntNoErr("port")
+
+				if t.Port <= 0 {
+					t.Port = tool.GenerateServerPort(t.Mode)
+				}
+
 				if !tool.TestServerPort(s.GetIntNoErr("port"), t.Mode) {
 					s.AjaxErr("The port cannot be opened because it may has been occupied or is no longer allowed.")
 					return
 				}
-				t.Port = s.GetIntNoErr("port")
 			}
-			if t.Mode == "socks5" && s.getEscapeString("S5User") == "" {
-				s.AjaxErr("The account number cannot be empty")
-				return
-			}
+			//if t.Mode == "socks5" && s.getEscapeString("S5User") == "" {
+			//	s.AjaxErr("The account number cannot be empty")
+			//	return
+			//}
 			t.ServerIp = s.getEscapeString("server_ip")
 			t.Mode = s.getEscapeString("type")
 			t.Target = &file.Target{TargetStr: s.getEscapeString("target")}
@@ -202,7 +216,12 @@ func (s *IndexController) Edit() {
 			t.Remark = s.getEscapeString("remark")
 			t.Target.LocalProxy = s.GetBoolNoErr("local_proxy")
 			t.S5User = s.getEscapeString("S5User")
-			t.ExpireTime = s.getEscapeString("expire_time")
+			t.PortConfig = &file.PortConfig{
+				FlowLimit:  int64(s.GetIntNoErr("flow_limit")),
+				RateLimit:  s.GetIntNoErr("rate_limit"),
+				MaxConn:    s.GetIntNoErr("max_conn"),
+				ExpireTime: s.getEscapeString("expire_time"),
+			}
 			t.MultiAccount = &file.MultiAccount{AccountMap: authStrToMap(s.getEscapeString("S5User"))}
 			file.GetDb().UpdateTask(t)
 			server.StopServer(t.Id)
@@ -279,8 +298,9 @@ func (s *IndexController) AddHost() {
 		s.SetInfo("add host")
 		s.display("index/hadd")
 	} else {
+		id := int(file.GetDb().JsonDb.GetHostId())
 		h := &file.Host{
-			Id:           int(file.GetDb().JsonDb.GetHostId()),
+			Id:           id,
 			Host:         s.getEscapeString("host"),
 			Target:       &file.Target{TargetStr: s.getEscapeString("target"), LocalProxy: s.GetBoolNoErr("local_proxy")},
 			HeaderChange: s.getEscapeString("header"),
@@ -291,15 +311,20 @@ func (s *IndexController) AddHost() {
 			Scheme:       s.getEscapeString("scheme"),
 			KeyFilePath:  s.getEscapeString("key_file_path"),
 			CertFilePath: s.getEscapeString("cert_file_path"),
+			AutoHttps:    s.GetBoolNoErr("AutoHttps"),
 		}
 		var err error
 		if h.Client, err = file.GetDb().GetClient(s.GetIntNoErr("client_id")); err != nil {
 			s.AjaxErr("add error the client can not be found")
 		}
+		if h.Client.MaxTunnelNum != 0 && h.Client.GetTunnelNum() >= h.Client.MaxTunnelNum {
+			s.AjaxErr("The number of tunnels exceeds the limit")
+		}
+
 		if err := file.GetDb().NewHost(h); err != nil {
 			s.AjaxErr("add fail" + err.Error())
 		}
-		s.AjaxOk("add success")
+		s.AjaxOkWithId("add success", id)
 	}
 }
 
@@ -343,6 +368,7 @@ func (s *IndexController) EditHost() {
 			h.KeyFilePath = s.getEscapeString("key_file_path")
 			h.CertFilePath = s.getEscapeString("cert_file_path")
 			h.Target.LocalProxy = s.GetBoolNoErr("local_proxy")
+			h.AutoHttps = s.GetBoolNoErr("AutoHttps")
 			file.GetDb().JsonDb.StoreHostToJsonFile()
 		}
 		s.AjaxOk("modified success")

@@ -5,6 +5,7 @@ import (
 	"errors"
 	"math"
 	"os"
+	"sort"
 	"strconv"
 	"strings"
 	"sync"
@@ -71,7 +72,7 @@ func DealBridgeTask() {
 			logs.Trace("New secret connection, addr", s.Conn.Conn.RemoteAddr())
 			if t := file.GetDb().GetTaskByMd5Password(s.Password); t != nil {
 				if t.Status {
-					go proxy.NewBaseServer(Bridge, t).DealClient(s.Conn, t.Client, t.Target.TargetStr, nil, common.CONN_TCP, nil, t.Flow, t.Target.LocalProxy)
+					go proxy.NewBaseServer(Bridge, t).DealClient(s.Conn, t.Client, t.Target.TargetStr, nil, common.CONN_TCP, nil, t.Flow, t.Target.LocalProxy, nil)
 				} else {
 					s.Conn.Close()
 					logs.Trace("This key %s cannot be processed,status is close", s.Password)
@@ -172,6 +173,7 @@ func StopServer(id int) error {
 			return err
 		} else {
 			t.Status = false
+			logs.Info("close port %d,remark %s,client id %d,task id %d", t.Port, t.Remark, t.Client.Id, t.Id)
 			file.GetDb().UpdateTask(t)
 		}
 		//delete(RunList, id)
@@ -238,17 +240,63 @@ func DelTask(id int) error {
 }
 
 // get task list by page num
-func GetTunnel(start, length int, typeVal string, clientId int, search string) ([]*file.Tunnel, int) {
+func GetTunnel(start, length int, typeVal string, clientId int, search string, sortField string, order string) ([]*file.Tunnel, int) {
+	all_list := make([]*file.Tunnel, 0) //store all Tunnel
 	list := make([]*file.Tunnel, 0)
 	var cnt int
 	keys := file.GetMapKeys(file.GetDb().JsonDb.Tasks, false, "", "")
+
+	//get all Tunnel and sort
 	for _, key := range keys {
 		if value, ok := file.GetDb().JsonDb.Tasks.Load(key); ok {
 			v := value.(*file.Tunnel)
 			if (typeVal != "" && v.Mode != typeVal || (clientId != 0 && v.Client.Id != clientId)) || (typeVal == "" && clientId != v.Client.Id) {
 				continue
 			}
-			if search != "" && !(v.Id == common.GetIntNoErrByStr(search) || v.Port == common.GetIntNoErrByStr(search) || strings.Contains(v.Password, search) || strings.Contains(v.Remark, search)) {
+			all_list = append(all_list, v)
+		}
+	}
+	//sort by Id, Remark, TargetStr, Port, asc or desc
+	if sortField == "Id" {
+		if order == "asc" {
+			sort.SliceStable(all_list, func(i, j int) bool { return all_list[i].Id < all_list[j].Id })
+		} else {
+			sort.SliceStable(all_list, func(i, j int) bool { return all_list[i].Id > all_list[j].Id })
+		}
+	} else if sortField == "ClientId" {
+		if order == "asc" {
+			sort.SliceStable(all_list, func(i, j int) bool { return all_list[i].Client.Id < all_list[j].Client.Id })
+		} else {
+			sort.SliceStable(all_list, func(i, j int) bool { return all_list[i].Client.Id > all_list[j].Client.Id })
+		}
+	} else if sortField == "Remark" {
+		if order == "asc" {
+			sort.SliceStable(all_list, func(i, j int) bool { return all_list[i].Remark < all_list[j].Remark })
+		} else {
+			sort.SliceStable(all_list, func(i, j int) bool { return all_list[i].Remark > all_list[j].Remark })
+		}
+	} else if sortField == "Client.VerifyKey" {
+		if order == "asc" {
+			sort.SliceStable(all_list, func(i, j int) bool { return all_list[i].Client.VerifyKey < all_list[j].Client.VerifyKey })
+		} else {
+			sort.SliceStable(all_list, func(i, j int) bool { return all_list[i].Client.VerifyKey > all_list[j].Client.VerifyKey })
+		}
+	} else if sortField == "Target" {
+		if order == "asc" {
+			sort.SliceStable(all_list, func(i, j int) bool { return all_list[i].Target.TargetStr < all_list[j].Target.TargetStr })
+		} else {
+			sort.SliceStable(all_list, func(i, j int) bool { return all_list[i].Target.TargetStr > all_list[j].Target.TargetStr })
+		}
+	}
+
+	//search
+	for _, key := range all_list {
+		if value, ok := file.GetDb().JsonDb.Tasks.Load(key.Id); ok {
+			v := value.(*file.Tunnel)
+			if (typeVal != "" && v.Mode != typeVal || (clientId != 0 && v.Client.Id != clientId)) || (typeVal == "" && clientId != v.Client.Id) {
+				continue
+			}
+			if search != "" && !(v.Id == common.GetIntNoErrByStr(search) || v.Port == common.GetIntNoErrByStr(search) || strings.Contains(v.Password, search) || strings.Contains(v.Remark, search) || strings.Contains(v.Target.TargetStr, search)) {
 				continue
 			}
 			cnt++
@@ -259,7 +307,6 @@ func GetTunnel(start, length int, typeVal string, clientId int, search string) (
 			}
 			if start--; start < 0 {
 				if length--; length >= 0 {
-					//if _, ok := RunList[v.Id]; ok {
 					if _, ok := RunList.Load(v.Id); ok {
 						v.RunStatus = true
 					} else {
@@ -281,32 +328,45 @@ func GetClientList(start, length int, search, sort, order string, clientId int) 
 }
 
 func dealClientData() {
+	//logs.Info("dealClientData.........")
+
 	file.GetDb().JsonDb.Clients.Range(func(key, value interface{}) bool {
 		v := value.(*file.Client)
 		if vv, ok := Bridge.Client.Load(v.Id); ok {
 			v.IsConnect = true
+			v.LastOnlineTime = time.Now().Format("2006-01-02 15:04:05")
 			v.Version = vv.(*bridge.Client).Version
 		} else {
 			v.IsConnect = false
 		}
-		v.Flow.InletFlow = 0
-		v.Flow.ExportFlow = 0
-		file.GetDb().JsonDb.Hosts.Range(func(key, value interface{}) bool {
-			h := value.(*file.Host)
-			if h.Client.Id == v.Id {
-				v.Flow.InletFlow += h.Flow.InletFlow
-				v.Flow.ExportFlow += h.Flow.ExportFlow
-			}
-			return true
-		})
-		file.GetDb().JsonDb.Tasks.Range(func(key, value interface{}) bool {
-			t := value.(*file.Tunnel)
-			if t.Client.Id == v.Id {
-				v.Flow.InletFlow += t.Flow.InletFlow
-				v.Flow.ExportFlow += t.Flow.ExportFlow
-			}
-			return true
-		})
+		//v.Flow.InletFlow = 0
+		//v.Flow.ExportFlow = 0
+		//if len(file.GetDb().JsonDb.Hosts) == 0 {
+		//
+		//}
+		//var inflow int64 = 0
+		//var outflow int64 = 0
+		//file.GetDb().JsonDb.Hosts.Range(func(key, value interface{}) bool {
+		//	h := value.(*file.Host)
+		//	if h.Client.Id == v.Id {
+		//		inflow  += h.Flow.InletFlow
+		//		outflow += h.Flow.ExportFlow
+		//	}
+		//	return true
+		//})
+		//file.GetDb().JsonDb.Tasks.Range(func(key, value interface{}) bool {
+		//	t := value.(*file.Tunnel)
+		//	if t.Client.Id == v.Id {
+		//		inflow  += t.Flow.InletFlow
+		//		outflow += t.Flow.ExportFlow
+		//	}
+		//	return true
+		//})
+		//
+		//if inflow >0 || outflow >0{
+		//	v.Flow.InletFlow = inflow
+		//	v.Flow.ExportFlow = outflow
+		//}
 		return true
 	})
 	return
@@ -446,6 +506,7 @@ func GetDashboardData() map[string]interface{} {
 	return data
 }
 
+// 实例化流量数据到文件
 func flowSession(m time.Duration) {
 	ticker := time.NewTicker(m)
 	defer ticker.Stop()
@@ -455,6 +516,7 @@ func flowSession(m time.Duration) {
 			file.GetDb().JsonDb.StoreHostToJsonFile()
 			file.GetDb().JsonDb.StoreTasksToJsonFile()
 			file.GetDb().JsonDb.StoreClientsToJsonFile()
+			file.GetDb().JsonDb.StoreGlobalToJsonFile()
 		}
 	}
 }

@@ -11,7 +11,6 @@ import (
 	"ehang.io/nps/lib/conn"
 	"ehang.io/nps/lib/crypt"
 	"ehang.io/nps/lib/file"
-	"github.com/astaxie/beego"
 	"github.com/astaxie/beego/logs"
 	"github.com/pkg/errors"
 )
@@ -20,6 +19,7 @@ type HttpsServer struct {
 	httpServer
 	listener         net.Listener
 	httpsListenerMap sync.Map
+	hostIdCertMap    sync.Map
 }
 
 func NewHttpsServer(l net.Listener, bridge NetBridge, useCache bool, cacheLen int) *HttpsServer {
@@ -34,57 +34,168 @@ func NewHttpsServer(l net.Listener, bridge NetBridge, useCache bool, cacheLen in
 
 // start https server
 func (https *HttpsServer) Start() error {
-	if b, err := beego.AppConfig.Bool("https_just_proxy"); err == nil && b {
-		conn.Accept(https.listener, func(c net.Conn) {
-			https.handleHttps(c)
-		})
-	} else {
-		//start the default listener
-		certFile := beego.AppConfig.String("https_default_cert_file")
-		keyFile := beego.AppConfig.String("https_default_key_file")
-		if common.FileExists(certFile) && common.FileExists(keyFile) {
-			l := NewHttpsListener(https.listener)
-			https.NewHttps(l, certFile, keyFile)
-			https.httpsListenerMap.Store("default", l)
-		}
-		conn.Accept(https.listener, func(c net.Conn) {
-			serverName, rb := GetServerNameFromClientHello(c)
-			//if the clientHello does not contains sni ,use the default ssl certificate
-			if serverName == "" {
-				serverName = "default"
-			}
-			var l *HttpsListener
-			if v, ok := https.httpsListenerMap.Load(serverName); ok {
-				l = v.(*HttpsListener)
+
+	conn.Accept(https.listener, func(c net.Conn) {
+		serverName, rb := GetServerNameFromClientHello(c)
+		r := buildHttpsRequest(serverName)
+		if host, err := file.GetDb().GetInfoByHost(serverName, r); err != nil {
+			c.Close()
+			logs.Debug("the url %s can't be parsed!,remote addr %s", serverName, c.RemoteAddr().String())
+			return
+		} else {
+			if host.CertFilePath == "" || host.KeyFilePath == "" {
+				logs.Debug("加载客户端本地证书")
+				https.handleHttps2(c, serverName, rb, r)
 			} else {
-				r := buildHttpsRequest(serverName)
-				if host, err := file.GetDb().GetInfoByHost(serverName, r); err != nil {
-					c.Close()
-					logs.Notice("the url %s can't be parsed!,remote addr %s", serverName, c.RemoteAddr().String())
-					return
-				} else {
-					if !common.FileExists(host.CertFilePath) || !common.FileExists(host.KeyFilePath) {
-						//if the host cert file or key file is not set ,use the default file
-						if v, ok := https.httpsListenerMap.Load("default"); ok {
-							l = v.(*HttpsListener)
-						} else {
-							c.Close()
-							logs.Error("the key %s cert %s file is not exist", host.KeyFilePath, host.CertFilePath)
-							return
-						}
-					} else {
-						l = NewHttpsListener(https.listener)
-						https.NewHttps(l, host.CertFilePath, host.KeyFilePath)
-						https.httpsListenerMap.Store(serverName, l)
+				logs.Debug("使用上传证书")
+				https.cert(host, c, rb, host.CertFilePath, host.KeyFilePath)
+			}
+		}
+	})
+
+	//var err error
+	//if https.errorContent, err = common.ReadAllFromFile(filepath.Join(common.GetRunPath(), "web", "static", "page", "error.html")); err != nil {
+	//	https.errorContent = []byte("nps 404")
+	//}
+	//if b, err := beego.AppConfig.Bool("https_just_proxy"); err == nil && b {
+	//	conn.Accept(https.listener, func(c net.Conn) {
+	//		https.handleHttps(c)
+	//	})
+	//} else {
+	//	//start the default listener
+	//	certFile := beego.AppConfig.String("https_default_cert_file")
+	//	keyFile := beego.AppConfig.String("https_default_key_file")
+	//	if common.FileExists(certFile) && common.FileExists(keyFile) {
+	//		l := NewHttpsListener(https.listener)
+	//		https.NewHttps(l, certFile, keyFile)
+	//		https.httpsListenerMap.Store("default", l)
+	//	}
+	//	conn.Accept(https.listener, func(c net.Conn) {
+	//		serverName, rb := GetServerNameFromClientHello(c)
+	//		//if the clientHello does not contains sni ,use the default ssl certificate
+	//		if serverName == "" {
+	//			serverName = "default"
+	//		}
+	//		var l *HttpsListener
+	//		if v, ok := https.httpsListenerMap.Load(serverName); ok {
+	//			l = v.(*HttpsListener)
+	//		} else {
+	//			r := buildHttpsRequest(serverName)
+	//			if host, err := file.GetDb().GetInfoByHost(serverName, r); err != nil {
+	//				c.Close()
+	//				logs.Notice("the url %s can't be parsed!,remote addr %s", serverName, c.RemoteAddr().String())
+	//				return
+	//			} else {
+	//				if !common.FileExists(host.CertFilePath) || !common.FileExists(host.KeyFilePath) {
+	//					//if the host cert file or key file is not set ,use the default file
+	//					if v, ok := https.httpsListenerMap.Load("default"); ok {
+	//						l = v.(*HttpsListener)
+	//					} else {
+	//						c.Close()
+	//						logs.Error("the key %s cert %s file is not exist", host.KeyFilePath, host.CertFilePath)
+	//						return
+	//					}
+	//				} else {
+	//					l = NewHttpsListener(https.listener)
+	//					https.NewHttps(l, host.CertFilePath, host.KeyFilePath)
+	//					https.httpsListenerMap.Store(serverName, l)
+	//				}
+	//			}
+	//		}
+	//		acceptConn := conn.NewConn(c)
+	//		acceptConn.Rb = rb
+	//		l.acceptConn <- acceptConn
+	//	})
+	//}
+	return nil
+}
+
+func (https *HttpsServer) cert(host *file.Host, c net.Conn, rb []byte, certFileUrl string, keyFileUrl string) {
+	var l *HttpsListener
+	i := 0
+	https.hostIdCertMap.Range(func(key, value interface{}) bool {
+		i++
+		// 如果host Id 不存在，则删除map
+		if id, ok := key.(int); ok {
+			var err error
+			_, err = file.GetDb().GetHostById(id)
+			if err != nil {
+				// 说明这个host已经不存了，需要释放Listener
+				logs.Error(err)
+				if oldL, ok := https.httpsListenerMap.Load(value); ok {
+					err := oldL.(*HttpsListener).Close()
+					if err != nil {
+						logs.Error(err)
 					}
+					https.httpsListenerMap.Delete(value)
+					https.hostIdCertMap.Delete(key)
+					logs.Info("Listener 已释放")
 				}
 			}
-			acceptConn := conn.NewConn(c)
-			acceptConn.Rb = rb
-			l.acceptConn <- acceptConn
-		})
+		}
+		return true
+	})
+
+	logs.Info("当前 Listener 连接数量", i)
+
+	if cert, ok := https.hostIdCertMap.Load(host.Id); ok {
+		if cert == certFileUrl {
+			// 证书已经存在，直接加载
+			if v, ok := https.httpsListenerMap.Load(certFileUrl); ok {
+				l = v.(*HttpsListener)
+			}
+		} else {
+			// 证书修改过，重新加载证书
+			l = NewHttpsListener(https.listener)
+			https.NewHttps(l, certFileUrl, keyFileUrl)
+			if oldL, ok := https.httpsListenerMap.Load(cert); ok {
+				err := oldL.(*HttpsListener).Close()
+				if err != nil {
+					logs.Error(err)
+				}
+				https.httpsListenerMap.Delete(cert)
+			}
+			https.httpsListenerMap.Store(certFileUrl, l)
+			https.hostIdCertMap.Store(host.Id, certFileUrl)
+		}
+	} else {
+		// 第一次加载证书
+		l = NewHttpsListener(https.listener)
+		https.NewHttps(l, certFileUrl, keyFileUrl)
+		https.httpsListenerMap.Store(certFileUrl, l)
+		https.hostIdCertMap.Store(host.Id, certFileUrl)
 	}
-	return nil
+
+	acceptConn := conn.NewConn(c)
+	acceptConn.Rb = rb
+	l.acceptConn <- acceptConn
+}
+
+// handle the https which is just proxy to other client
+func (https *HttpsServer) handleHttps2(c net.Conn, hostName string, rb []byte, r *http.Request) {
+	var targetAddr string
+	var host *file.Host
+	var err error
+	if host, err = file.GetDb().GetInfoByHost(hostName, r); err != nil {
+		c.Close()
+		logs.Debug("the url %s can't be parsed!", hostName)
+		return
+	}
+	if err := https.CheckFlowAndConnNum(host.Client); err != nil {
+		logs.Debug("client id %d, host id %d, error %s, when https connection", host.Client.Id, host.Id, err.Error())
+		c.Close()
+		return
+	}
+	defer host.Client.AddConn()
+	if err = https.auth(r, conn.NewConn(c), host.Client.Cnf.U, host.Client.Cnf.P); err != nil {
+		logs.Warn("auth error", err, r.RemoteAddr)
+		return
+	}
+	if targetAddr, err = host.Target.GetRandomTarget(); err != nil {
+		logs.Warn(err.Error())
+	}
+	logs.Info("new https connection,clientId %d,host %s,remote address %s", host.Client.Id, r.Host, c.RemoteAddr().String())
+	https.DealClient(conn.NewConn(c), host.Client, targetAddr, rb, common.CONN_TCP, nil, host.Client.Flow, host.Target.LocalProxy, nil)
 }
 
 // close
@@ -95,7 +206,9 @@ func (https *HttpsServer) Close() error {
 // new https server by cert and key file
 func (https *HttpsServer) NewHttps(l net.Listener, certFile string, keyFile string) {
 	go func() {
-		logs.Error(https.NewServer(0, "https").ServeTLS(l, certFile, keyFile))
+		//logs.Error(https.NewServer(0, "https").ServeTLS(l, certFile, keyFile))
+		logs.Error(https.NewServerWithTls(0, "https", l, certFile, keyFile))
+
 	}()
 }
 
@@ -125,7 +238,7 @@ func (https *HttpsServer) handleHttps(c net.Conn) {
 		logs.Warn(err.Error())
 	}
 	logs.Trace("new https connection,clientId %d,host %s,remote address %s", host.Client.Id, r.Host, c.RemoteAddr().String())
-	https.DealClient(conn.NewConn(c), host.Client, targetAddr, rb, common.CONN_TCP, nil, host.Flow, host.Target.LocalProxy)
+	https.DealClient(conn.NewConn(c), host.Client, targetAddr, rb, common.CONN_TCP, nil, host.Client.Flow, host.Target.LocalProxy, nil)
 }
 
 type HttpsListener struct {

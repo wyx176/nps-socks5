@@ -2,6 +2,7 @@ package client
 
 import (
 	"bufio"
+	"crypto/tls"
 	"encoding/base64"
 	"encoding/binary"
 	"errors"
@@ -28,6 +29,16 @@ import (
 	"github.com/xtaci/kcp-go"
 	"golang.org/x/net/proxy"
 )
+
+var tlsEnable1 = false
+
+func SetTlsEnable(tlsEnable11 bool) {
+	tlsEnable1 = tlsEnable11
+}
+
+func GetTlsEnable() bool {
+	return tlsEnable1
+}
 
 func GetTaskStatus(path string) {
 	cnf, err := config.NewConfig(path)
@@ -96,6 +107,8 @@ func StartFromFile(path string) {
 	}
 	logs.Info("Loading configuration file %s successfully", path)
 
+	SetTlsEnable(cnf.CommonConfig.TlsEnable)
+	logs.Info("the version of client is %s, the core version of client is %s,tls enable is %t", version.VERSION, version.GetVersion(), GetTlsEnable())
 re:
 	if first || cnf.CommonConfig.AutoReconnection {
 		if !first {
@@ -202,7 +215,32 @@ func NewConn(tp string, vkey string, server string, connType string, proxyUrl st
 				connection, err = NewHttpProxyConn(u, server)
 			}
 		} else {
-			connection, err = net.Dial("tcp", server)
+			if GetTlsEnable() {
+				//tls 流量加密
+				conf := &tls.Config{
+					InsecureSkipVerify: true,
+				}
+				connection, err = tls.Dial("tcp", server, conf)
+			} else {
+				connection, err = net.Dial("tcp", server)
+			}
+
+			//header := &proxyproto.Header{
+			//	Version:           1,
+			//	Command:           proxyproto.PROXY,
+			//	TransportProtocol: proxyproto.TCPv4,
+			//	SourceAddr: &net.TCPAddr{
+			//		IP:   net.ParseIP("10.1.1.1"),
+			//		Port: 1000,
+			//	},
+			//	DestinationAddr: &net.TCPAddr{
+			//		IP:   net.ParseIP("20.2.2.2"),
+			//		Port: 2000,
+			//	},
+			//}
+			//
+			//_, err = header.WriteTo(connection)
+			//_, err = io.WriteString(connection, "HELO")
 		}
 	} else {
 		sess, err = kcp.DialWithOptions(server, nil, 10, 3)
@@ -232,8 +270,8 @@ func NewConn(tp string, vkey string, server string, connType string, proxyUrl st
 		return nil, err
 	}
 	if crypt.Md5(version.GetVersion()) != string(b) {
-		logs.Error("The client does not match the server version. The current core version of the client is", version.GetVersion())
-		return nil, err
+		//logs.Error("The client does not match the server version. The current core version of the client is", version.GetVersion())
+		//return nil, err
 	}
 	if _, err := c.Write([]byte(common.Getverifyval(vkey))); err != nil {
 		return nil, err

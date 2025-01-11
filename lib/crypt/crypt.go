@@ -5,9 +5,12 @@ import (
 	"crypto/aes"
 	"crypto/cipher"
 	"crypto/md5"
+	"encoding/base64"
 	"encoding/hex"
 	"errors"
+	"github.com/google/uuid"
 	"math/rand"
+	"strings"
 	"time"
 )
 
@@ -73,4 +76,33 @@ func GetRandomString(l int) string {
 		result = append(result, bytes[r.Intn(len(bytes))])
 	}
 	return string(result)
+}
+
+func GetVkey() string {
+	// 生成UUID
+	u, _ := uuid.NewRandom()
+	// 将UUID转换为字符串
+	uuidStr := u.String()
+	uuidStr = strings.ReplaceAll(uuidStr, "-", "")
+	// 截取前10位
+	return uuidStr[:10]
+}
+
+func Base64Decoding(encodedString string) (string, error) {
+	decodedBytes, err := base64.StdEncoding.DecodeString(encodedString)
+	if err != nil {
+		// 处理解码错误
+		return "", err
+	}
+
+	// 将解码后的字节数组转换为字符串
+	decodedString := string(decodedBytes)
+
+	// 如果startCmd开头不包含"nps "，则报错
+	if len(decodedString) < 4 || !(decodedString[0:4] == "nps ") {
+		return "", errors.New("快捷启动命令错误，请检查")
+	}
+
+	return decodedString[4:], nil
+
 }

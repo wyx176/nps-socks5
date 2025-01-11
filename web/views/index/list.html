@@ -15,17 +15,15 @@
                         </a>
                     </div>
                 </div>
-				{{if eq true .isAdmin}}
                 <div class="content">
                     <div class="table-responsive">
                         <div id="toolbar">
-                            <a href="{{.web_base_url}}/index/add?type=socks5&client_id={{.client_id}}" class="btn btn-primary dim">
+                            <a href="{{.web_base_url}}/index/add?type={{.type}}&client_id={{.client_id}}" class="btn btn-primary dim">
                             <i class="fa fa-fw fa-lg fa-plus"></i> <span langtag="word-add"></span></a>
                         </div>
                         <table id="taskList_table" class="table-striped table-hover" data-mobile-responsive="true"></table>
                     </div>
                 </div>
-				{{end}}
                 <div class="ibox-content">
 
                     <table id="table"></table>
@@ -51,7 +49,9 @@
                 "limit": params.limit,
                 "type":{{.type}},
                 "client_id":{{.client_id}},
-                "search": params.search
+                "search": params.search,
+                "sort": params.sort,
+                "order": params.order
             }
         },
         search: true,
@@ -72,10 +72,6 @@
         detailFormatter: function (index, row, element) {
             tmp = '<b langtag="word-exportflow"></b>: ' + changeunit(row.Flow.ExportFlow) + '&emsp;'
                     + '<b langtag="word-inletflow"></b>: ' + changeunit(row.Flow.InletFlow) + '&emsp;'
-                    + '<b langtag="word-crypt"></b>: ' + row.Client.Cnf.Crypt + '&emsp;'
-                    + '<b langtag="word-compress"></b>: ' + row.Client.Cnf.Compress + '&emsp;'
-                    //+ '<b langtag="word-basicusername"></b>: ' + row.Client.Cnf.U + '&emsp;'
-                   // + '<b langtag="word-basicpassword"></b>: ' + row.Client.Cnf.P + '&emsp;'
             if (row.Mode == "p2p") {
                 return tmp + "<br/><br>"
                         + '<b langtag="word-commandaccessp2p"></b>: ' + "<code>./npc{{.win}} -server={{.ip}}:{{.p}} -vkey=" + row.Client.VerifyKey 
@@ -98,15 +94,17 @@
                 field: 'Id',//域值
                 title: '<span langtag="word-id"></span>',//标题
                 halign: 'center',
-                visible: true//false表示不显示
+                visible: true,//false表示不显示
+                sortable: true,//启用排序
             },
             {
-                field: 'Id',//域值
+                field: 'ClientId',//域值
                 title: '<span langtag="word-clientid"></span>',//标题
                 halign: 'center',
                 visible: true,//false表示不显示
+                sortable: true, //启用排序
                 formatter: function (value, row, index) {
-                    return row.Client.Id
+                    return row.Client.Id + '-' + row.Client.Remark
                 }
             },
             {
@@ -115,27 +113,32 @@
                 halign: 'center',
                 visible: true//false表示不显示
             },
-          
+            {
+                field: 'Client.VerifyKey',//域值
+                title: '<span langtag="word-verifykey"></span>',//标题
+                halign: 'center',
+                sortable: true, //启用排序
+                visible: true//false表示不显示
+            },
             {
                 field: 'Port',//域值
                 title: '<span langtag="word-port"></span>',//标题
                 halign: 'center',
+                sortable: true, //启用排序
                 visible: true//false表示不显示
             },
             {
-                field: 'Target',//域值
-                title: '<span langtag="word-target"></span>',//标题
+                field: 'ExpireTime',//域值
+                title: '<span langtag="word-expiretime"></span>',//标题
+                align: 'center',
                 halign: 'center',
-                visible: false,//false表示不显示
+                visible: true,//false表示不显示
                 formatter: function (value, row, index) {
-                    return row.Target.TargetStr
+                    if(row.PortConfig && row.PortConfig.ExpireTime){
+                        return row.PortConfig.ExpireTime
+                    }
+
                 }
-            },
-            {
-                field: 'Password',//域值
-                title: '<span langtag="word-identificationkey"></span>',//标题
-                halign: 'center',
-                visible: false//false表示不显示
             },
             {
                 field: 'Status',//域值
@@ -179,20 +182,6 @@
                     }
                 }
             },
-			{
-                field: 'CreateTime',//域值
-                title: '<span langtag="word-createtime"></span>',//标题
-				align: 'center',
-                halign: 'center',
-                visible: true//false表示不显示
-            },
-			{
-                field: 'ExpireTime',//域值
-                title: '<span langtag="word-expiretime"></span>',//标题
-				align: 'center',
-                halign: 'center',
-                visible: true//false表示不显示
-            },
             {
                 field: 'option',//域值
                 title: '<span langtag="word-option"></span>',//内容
@@ -208,10 +197,8 @@
                         btn_group += "<a onclick=\"submitform('start', '{{.web_base_url}}/index/start', {\'id\':" + row.Id
                         btn_group += '})" class="btn btn-outline btn-primary"><i class="fa fa-play"></i></a>'
                     }
-					{{if eq true .isAdmin}}
                     btn_group += "<a onclick=\"submitform('delete', '{{.web_base_url}}/index/del', {'id':" + row.Id
                     btn_group += '})" class="btn btn-outline btn-danger"><i class="fa fa-trash"></i></a>'
-					{{end}}
                     btn_group += '<a  href="{{.web_base_url}}/index/edit?id=' + row.Id
                     btn_group += '" class="btn btn-outline btn-success"><i class="fa fa-edit"></i></a></div>'
                     return btn_group

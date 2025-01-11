@@ -1,6 +1,7 @@
 package controllers
 
 import (
+	"ehang.io/nps/bridge"
 	"html"
 	"math"
 	"strconv"
@@ -32,6 +33,9 @@ func (s *BaseController) Prepare() {
 	md5Key := s.getEscapeString("auth_key")
 	timestamp := s.GetIntNoErr("timestamp")
 	configKey := beego.AppConfig.String("auth_key")
+	if configKey == "" {
+		configKey = crypt.GetRandomString(64)
+	}
 	timeNowUnix := time.Now().Unix()
 	if !(md5Key != "" && (math.Abs(float64(timeNowUnix-int64(timestamp))) <= 20) && (crypt.Md5(configKey+strconv.Itoa(timestamp)) == md5Key)) {
 		if s.GetSession("auth") != true {
@@ -80,7 +84,17 @@ func (s *BaseController) display(tpl ...string) {
 	if common.IsWindows() {
 		s.Data["win"] = ".exe"
 	}
-	s.Data["p"] = server.Bridge.TunnelPort
+
+	s.Data["p"] = strconv.Itoa(server.Bridge.TunnelPort)
+
+	if bridge.ServerTlsEnable {
+		tlsPort := strconv.Itoa(beego.AppConfig.DefaultInt("tls_bridge_port", 8025))
+		s.Data["tls_p"] = tlsPort
+		s.Data["p1"] = strconv.Itoa(server.Bridge.TunnelPort) + " / " + tlsPort
+	} else {
+		s.Data["p1"] = strconv.Itoa(server.Bridge.TunnelPort)
+	}
+
 	s.Data["proxyPort"] = beego.AppConfig.String("hostPort")
 	s.Layout = "public/layout.html"
 	s.TplName = tplname
@@ -125,6 +139,13 @@ func (s *BaseController) AjaxOk(str string) {
 	s.StopRun()
 }
 
+// ajax正确返回
+func (s *BaseController) AjaxOkWithId(str string, id int) {
+	s.Data["json"] = ajaxWithId(str, 1, id)
+	s.ServeJSON()
+	s.StopRun()
+}
+
 // ajax错误返回
 func (s *BaseController) AjaxErr(str string) {
 	s.Data["json"] = ajax(str, 0)
@@ -137,6 +158,15 @@ func ajax(str string, status int) map[string]interface{} {
 	json := make(map[string]interface{})
 	json["status"] = status
 	json["msg"] = str
+	return json
+}
+
+// 组装ajax
+func ajaxWithId(str string, status int, id int) map[string]interface{} {
+	json := make(map[string]interface{})
+	json["status"] = status
+	json["msg"] = str
+	json["id"] = id
 	return json
 }
 

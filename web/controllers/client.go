@@ -6,6 +6,8 @@ import (
 	"ehang.io/nps/lib/rate"
 	"ehang.io/nps/server"
 	"github.com/astaxie/beego"
+	"strings"
+	"time"
 )
 
 type ClientController struct {
@@ -43,9 +45,10 @@ func (s *ClientController) Add() {
 		s.SetInfo("add client")
 		s.display()
 	} else {
+		id := int(file.GetDb().JsonDb.GetClientId())
 		t := &file.Client{
 			VerifyKey: s.getEscapeString("vkey"),
-			Id:        int(file.GetDb().JsonDb.GetClientId()),
+			Id:        id,
 			Status:    true,
 			Remark:    s.getEscapeString("remark"),
 			Cnf: &file.Config{
@@ -65,11 +68,13 @@ func (s *ClientController) Add() {
 				InletFlow:  0,
 				FlowLimit:  int64(s.GetIntNoErr("flow_limit")),
 			},
+			BlackIpList: RemoveRepeatedElement(strings.Split(s.getEscapeString("blackiplist"), "\r\n")),
+			CreateTime:  time.Now().Format("2006-01-02 15:04:05"),
 		}
 		if err := file.GetDb().NewClient(t); err != nil {
 			s.AjaxErr(err.Error())
 		}
-		s.AjaxOk("add success")
+		s.AjaxOkWithId("add success", id)
 	}
 }
 func (s *ClientController) GetClient() {
@@ -96,6 +101,7 @@ func (s *ClientController) Edit() {
 			s.error()
 		} else {
 			s.Data["c"] = c
+			s.Data["BlackIpList"] = strings.Join(c.BlackIpList, "\r\n")
 		}
 		s.SetInfo("edit client")
 		s.display()
@@ -143,10 +149,29 @@ func (s *ClientController) Edit() {
 				c.Rate = rate.NewRate(int64(2 << 23))
 				c.Rate.Start()
 			}
+
+			c.BlackIpList = RemoveRepeatedElement(strings.Split(s.getEscapeString("blackiplist"), "\r\n"))
 			file.GetDb().JsonDb.StoreClientsToJsonFile()
 		}
 		s.AjaxOk("save success")
 	}
+}
+
+func RemoveRepeatedElement(arr []string) (newArr []string) {
+	newArr = make([]string, 0)
+	for i := 0; i < len(arr); i++ {
+		repeat := false
+		for j := i + 1; j < len(arr); j++ {
+			if arr[i] == arr[j] {
+				repeat = true
+				break
+			}
+		}
+		if !repeat {
+			newArr = append(newArr, arr[i])
+		}
+	}
+	return
 }
 
 // 更改状态

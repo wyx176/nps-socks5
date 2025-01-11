@@ -5,7 +5,7 @@
             <div class="ibox-content">
                 <form class="form-horizontal">
                     <input type="hidden" name="id" value="{{.t.Id}}">
-                    <div class="form-group">
+                    <div class="form-group hidden">
                         <label class="col-sm-2 control-label font-bold" langtag="word-scheme"></label>
                         <div class="col-sm-10">
                             <span class="help-block m-b-none font-bold" langtag="word-usecase"></span>: 
@@ -18,7 +18,7 @@
                                 <span id="casep2p" langtag="info-casep2p"></span>
                                 <span id="casefile" langtag="info-casefile"></span>
                             </span>
-                            <select class="form-control" name="type" id="type" style="display:none">
+                            <select class="form-control" name="type" id="type">
                                 <option value="tcp" langtag="scheme-tcp"></option>
                                 <option value="udp" langtag="scheme-udp"></option>
                                 <option value="httpProxy" langtag="scheme-httpProxy"></option>
@@ -30,7 +30,7 @@
                         </div>
                     </div>
 
-                    <div class="form-group" id="client_id">
+                    <div class="form-group hidden" id="client_id">
                         <label class="col-sm-2 control-label font-bold" langtag="word-clientid"></label>
                         <div class="col-sm-10">
                             <input value="{{.t.Client.Id}}" value="{{.client_id}}" class="form-control" type="text" name="client_id" placeholder="" langtag="word-clientid">
@@ -40,33 +40,40 @@
                     <div class="form-group">
                         <label class="col-sm-2 control-label font-bold" langtag="word-remark"></label>
                         <div class="col-sm-10">
-                            <input value="{{.t.Remark}}" class="form-control" type="text" name="remark" placeholder="" langtag="word-remark">
+                            <input value="{{.t.Remark}}" class="form-control" type="text" name="remark" placeholder="" langtag="info-unrestricted">
                         </div>
                     </div>
-					
-					<div class="form-group" {{if eq false .isAdmin}} style="display:none" {{end}}>
-                        <label class="col-sm-2 control-label font-bold" langtag="word-expiretime"></label>
+
+                    {{if eq true .isAdmin}}
+                    <div class="form-group" id="flow_limit">
+                        <label class="control-label font-bold" langtag="word-flowlimit"></label>
                         <div class="col-sm-10">
-							<input type="text" name="expire_time" class="form-control" value="{{.t.ExpireTime}}"  placeholder="留空则表示不受限制" readonly id="expiretime">
+                            <input class="form-control" type="text"  value="{{.t.PortConfig.FlowLimit}}" name="flow_limit" placeholder="" langtag="info-unrestricted">
+                            <span class="help-block m-b-none" langtag="word-unit"></span>: M
                         </div>
                     </div>
-					 
-					 
-                {{if eq true .allow_multi_ip}}
-                    <div class="form-group" id="server_ip">
-                        <label class="col-sm-2 control-label font-bold" langtag="word-serverip"></label>
+
+                    <div class="form-group" id="max_conn">
+                        <label class="control-label font-bold" langtag="word-maxconnections"></label>
                         <div class="col-sm-10">
-                            <input class="form-control" type="text" value="{{.t.ServerIp}}" name="server_ip" placeholder="" langtag="info-suchasip">
+                            <input class="form-control" type="text" value="{{.t.PortConfig.MaxConn}}" name="max_conn" placeholder="" langtag="info-unrestricted">
                         </div>
                     </div>
-                {{end}}
+
+                        <div class="form-group" >
+                            <label class="col-sm-2 control-label font-bold" langtag="word-expiretime"></label>
+                            <div class="col-sm-10">
+                                <input type="text" value="{{.t.PortConfig.ExpireTime}}" name="expire_time" class="form-control"  placeholder="留空则表示不受限制" readonly id="expiretime">
+                            </div>
+                        </div>
+                    {{end}}
                     <div class="form-group" id="port">
                         <label class="col-sm-2 control-label font-bold" langtag="word-serverport"></label>
                         <div class="col-sm-10">
                             <input value="{{.t.Port}}" class="form-control" type="text" name="port" placeholder="" langtag="info-suchasport">
                         </div>
                     </div>
-					<div class="form-group" id="S5User">
+                    <div class="form-group" id="S5User">
                         <label class="control-label font-bold" langtag="info-suchass5usertitle"></label>
                         <div class="col-sm-10">
                             <textarea class="form-control" name="S5User" rows="4" placeholder=""
@@ -134,7 +141,7 @@
     arr["all"] = ["port", "target", "password", "local_path", "strip_pre", "local_proxy"]
     arr["tcp"] = ["client_id", "port", "target", "local_proxy"]
     arr["udp"] = ["client_id", "port", "target", "local_proxy"]
-    arr["socks5"] = ["client_id", "port","S5User"]
+    arr["socks5"] = ["port", "client_id", "server_ip","S5User","expire_time","flow_limit","max_conn"]
     arr["httpProxy"] = ["client_id", "port"]
     arr["secret"] = ["client_id", "target", "password"]
     arr["p2p"] = ["client_id", "target", "password"]
@@ -159,11 +166,10 @@
         $("#use_client").on("change", function () {
             resetForm()
         })
-		
-		/* 第三步:初始化插件  */
-		laydate.render({
-			elem: '#expiretime' //指定元素
-			 ,type: 'datetime'
-		});
+        /* 第三步:初始化插件  */
+        laydate.render({
+            elem: '#expiretime' //指定元素
+            ,type: 'datetime'
+        });
     })
 </script>

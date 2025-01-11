@@ -3,10 +3,11 @@ package client
 import (
 	"bufio"
 	"bytes"
-	"ehang.io/nps-mux"
+	"ehang.io/nps/lib/nps_mux"
 	"net"
 	"net/http"
 	"strconv"
+	"strings"
 	"sync"
 	"time"
 
@@ -197,7 +198,11 @@ func (s *TRPClient) handleChan(src net.Conn) {
 					targetConn.Close()
 					break
 				} else {
-					logs.Trace("http request, method %s, host %s, url %s, remote address %s", r.Method, r.Host, r.URL.Path, r.RemoteAddr)
+					remoteAddr := strings.TrimSpace(r.Header.Get("X-Forwarded-For"))
+					if len(remoteAddr) == 0 {
+						remoteAddr = r.RemoteAddr
+					}
+					logs.Trace("http request, method %s, host %s, url %s, remote address %s", r.Method, r.Host, r.URL.Path, remoteAddr)
 					r.Write(targetConn)
 				}
 			}
@@ -214,7 +219,7 @@ func (s *TRPClient) handleChan(src net.Conn) {
 		src.Close()
 	} else {
 		logs.Trace("new %s connection with the goal of %s, remote address:%s", lk.ConnType, lk.Host, lk.RemoteAddr)
-		conn.CopyWaitGroup(src, targetConn, lk.Crypt, lk.Compress, nil, nil, false, nil)
+		conn.CopyWaitGroup(src, targetConn, lk.Crypt, lk.Compress, nil, nil, false, nil, nil)
 	}
 }
 
