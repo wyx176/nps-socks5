@@ -1,4 +1,5 @@
 #!/bin/bash
+export LC_ALL=en_US.UTF-8
 
 # 文件下载存储路径
 SOCKS5_PATH="/opt/nps-socks5"
