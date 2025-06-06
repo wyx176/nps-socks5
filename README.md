@@ -60,3 +60,5 @@ allow_user_register=true<br>
 
 ## 写在最后 ##
 Telegram交流群:https://t.me/Socks55555
+
+[![Powered by DartNode](https://dartnode.com/branding/DN-Open-Source-sm.png)](https://dartnode.com "Powered by DartNode - Free VPS for Open Source")
